@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Presale Checkout</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      background: url('Presale1.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Arial', sans-serif;
+      color: #fff;
+      text-align: center;
+      padding-top: 60px;
+    }
+    .glow-button {
+      background: linear-gradient(135deg, #00f0ff, #ff00d4);
+      border: none;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-size: 20px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 15px #00f0ff, 0 0 30px #ff00d4;
+      animation: pulse 1.5s infinite;
+      margin-top: 20px;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 10px #00f0ff, 0 0 20px #ff00d4; }
+      50% { box-shadow: 0 0 25px #00f0ff, 0 0 50px #ff00d4; }
+      100% { box-shadow: 0 0 10px #00f0ff, 0 0 20px #ff00d4; }
+    }
+    input, select {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 20px;
+    }
+    #amountDisplay {
+      margin-top: 10px;
+      font-size: 24px;
+      color: #00f0ff;
+      text-shadow: 0 0 5px #ff00d4;
+    }
+    #manualPayment {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #ffccff;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>Presale Purchase</h1>
+
+  <label for="currencySelect">Select Currency:</label>
+  <br>
+  <select id="currencySelect" onchange="updateAmount()">
+    <option value="BNB">BNB</option>
+    <option value="BTC">BTC</option>
+    <option value="SOL">SOL</option>
+    <option value="XRP">XRP</option>
+    <option value="DOGE">DOGE</option>
+    <option value="TON">TON</option>
+  </select>
+
+  <div>
+    <p>Enter quantity:</p>
+    <input type="number" id="qtyInput" min="1" value="1" oninput="updateAmount()" />
+    <div id="amountDisplay">Total: 0.0077 BNB</div>
+
+    <button class="glow-button" onclick="handleBuy()">Buy Now</button>
+    <div id="manualPayment" class="hidden"></div>
+  </div>
+
+  <script>
+    const recipientAddress = '0xed9b43bED20B063ae0966C0AEC446bc755fB84bA';
+
+    const prices = {
+      BNB: 0.0077,
+      BTC: 0.00012,
+      SOL: 0.05,
+      XRP: 5.2,
+      DOGE: 100,
+      TON: 1.3
+    };
+
+    function updateAmount() {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const currency = document.getElementById('currencySelect').value;
+      const total = (qty * prices[currency]).toFixed(4);
+      document.getElementById('amountDisplay').innerText = `Total: ${total} ${currency}`;
+      document.getElementById('manualPayment').classList.add('hidden');
+    }
+
+    async function handleBuy() {
+      const currency = document.getElementById('currencySelect').value;
+      if (currency === 'BNB') {
+        sendBNB();
+      } else {
+        showManualPayment(currency);
+      }
+    }
+
+    async function sendBNB() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('No wallet detected. Use a Web3 wallet like MetaMask.');
+        return;
+      }
+
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await web3.eth.getAccounts();
+      const sender = accounts[0];
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const totalBNB = (qty * prices['BNB']).toString();
+
+      try {
+        await web3.eth.sendTransaction({
+          from: sender,
+          to: recipientAddress,
+          value: web3.utils.toWei(totalBNB, 'ether')
+        });
+        alert('Payment successful! Redirecting...');
+        window.location.href = "/treasure";
+      } catch (error) {
+        alert('Transaction failed or canceled.');
+        console.error(error);
+      }
+    }
+
+    function showManualPayment(currency) {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const total = (qty * prices[currency]).toFixed(4);
+      const msg = `
+        Send exactly <b>${total} ${currency}</b> to:<br>
+        <code>${recipientAddress}</code><br><br>
+        After payment, you will be redirected manually.
+      `;
+      const div = document.getElementById('manualPayment');
+      div.innerHTML = msg;
+      div.classList.remove('hidden');
+    }
+
+    updateAmount();
+  </script>
+
+</body>
+</html>
