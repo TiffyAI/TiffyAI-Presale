@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Presale Checkout</title>
+  <title>Lottery Checkout</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
   <style>
     body {
-      background: url('Presale1.jpg') no-repeat center center fixed;
+      background: url('lottery.jpg') no-repeat center center fixed;
       background-size: cover;
       font-family: 'Arial', sans-serif;
       color: #fff;
@@ -90,13 +90,13 @@
           console.error(error);
         }
       } else {
-        alert('MetaMask is not installed');
+        alert('No wallet detected. Copy and paste the link from your browser into your wallet DApp or Open MetaMask first and click the button again, you will then be redirected');
       }
     }
 
     async function sendBNB() {
       if (typeof window.ethereum === 'undefined') {
-        alert('Install or Open in MetaMask!');
+        alert('No wallet detected. Copy and paste the link from your browser into your wallet DApp or Open MetaMask first and click the button again, you will then be redirected!');
         return;
       }
 
