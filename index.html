@@ -210,7 +210,6 @@
     </div>
   </div>
 
-  <!-- Invoice Modal -->
   <div id="invoiceModal" class="invoice-modal" role="dialog" aria-hidden="true">
     <div style="font-weight:800; font-size:18px;">Invoice</div>
     <div class="invoice-details" id="invoiceDetails"></div>
@@ -220,7 +219,6 @@
     </div>
   </div>
 
-  <!-- Payment Modal -->
   <div id="paymentModal" class="payment-modal" role="dialog" aria-hidden="true">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div style="font-weight:800; font-size:18px;">Confirm Payment</div>
@@ -245,9 +243,6 @@
   </div>
 
   <script>
-    // -------------------
-    // CONFIG
-    // -------------------
     const recipientAddress = '0xed9b43bED20B063ae0966C0AEC446bc755fB84bA';
     const TOKEN_ADDRESSES = {
       USDT: '0x55d398326f99059fF775485246999027B3197955',
@@ -290,9 +285,6 @@
       }
     ];
 
-    // -------------------
-    // UI & Helpers
-    // -------------------
     const connectBtn = document.getElementById('connectBtn');
     const buyBtn = document.getElementById('buyBtn');
     const currencySelect = document.getElementById('currencySelect');
@@ -314,7 +306,7 @@
     const connectedAddrEl = document.getElementById('connectedAddr');
     const chainInfo = document.getElementById('chainInfo');
 
-    let web3, userAccount, currentChainId;
+    let web3, userAccount, currentChainId, walletType;
 
     function toFixedTrim(n, decimals = 6) {
       return parseFloat(n).toFixed(decimals).replace(/\.?0+$/, '');
@@ -343,31 +335,65 @@
       updateAmountDisplay();
     }
 
-    // -------------------
-    // Wallet Connect & Chain Handling
-    // -------------------
+    async function detectProvider() {
+      console.log('Detecting Web3 provider');
+      let provider = null;
+      const maxAttempts = 10;
+      let attempts = 0;
+      while (!provider && attempts < maxAttempts) {
+        provider = window.ethereum || (window.web3 && window.web3.currentProvider);
+        if (window.ethereum) {
+          if (window.ethereum.isMetaMask) {
+            walletType = 'metamask';
+            console.log('Detected MetaMask provider');
+          } else if (window.ethereum.isTrust || window.ethereum.isTrustWallet) {
+            walletType = 'trust';
+            console.log('Detected Trust Wallet provider');
+          } else if (window.ethereum.isOKXWallet) {
+            walletType = 'okx';
+            console.log('Detected OKX Wallet provider');
+          } else {
+            walletType = 'unknown';
+            console.log('Detected unknown provider');
+          }
+          provider = window.ethereum;
+          break;
+        }
+        console.log(`Waiting for provider, attempt ${attempts + 1}/${maxAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      if (!provider) {
+        console.error('No Web3 provider detected after retries');
+        alert('No Web3 wallet detected. Please ensure MetaMask, Trust Wallet, or OKX Wallet is installed and active.');
+        return null;
+      }
+      return provider;
+    }
+
     async function connectWallet() {
       console.log('Attempting wallet connection');
-      if (!window.ethereum) {
-        alert('No Web3 wallet detected. Please install MetaMask, Trust Wallet, or OKX Wallet.');
-        console.error('No Ethereum provider found');
+      const provider = await detectProvider();
+      if (!provider) {
+        console.error('No provider available for connection');
         return false;
       }
       try {
-        web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        web3 = new Web3(provider);
+        console.log('Web3 initialized');
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
         userAccount = accounts[0];
         connectedAddrEl.textContent = `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
 
         try {
-          await window.ethereum.request({
+          await provider.request({
             method: 'wallet_switchEthereumChain',
             params: [{ chainId: '0x38' }],
           });
           console.log('Switched to BSC');
         } catch (switchError) {
           if (switchError.code === 4902) {
-            await window.ethereum.request({
+            await provider.request({
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: '0x38',
@@ -387,9 +413,9 @@
         chainInfo.textContent = `Chain: BSC (${currentChainId})`;
         connectBtn.textContent = 'Wallet Connected';
         connectBtn.disabled = true;
-        console.log('Wallet connected:', userAccount, 'Chain ID:', currentChainId);
+        console.log('Wallet connected:', userAccount, 'Chain ID:', currentChainId, 'Wallet type:', walletType);
 
-        window.ethereum.on('accountsChanged', (accs) => {
+        provider.on('accountsChanged', (accs) => {
           userAccount = accs[0];
           connectedAddrEl.textContent = userAccount ? `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}` : 'Not connected';
           connectBtn.textContent = userAccount ? 'Wallet Connected' : 'Connect Wallet';
@@ -397,7 +423,7 @@
           console.log('Accounts changed:', userAccount);
         });
 
-        window.ethereum.on('chainChanged', (chainHex) => {
+        provider.on('chainChanged', (chainHex) => {
           currentChainId = parseInt(chainHex, 16);
           chainInfo.textContent = `Chain: BSC (${currentChainId})`;
           console.log('Chain changed:', currentChainId);
@@ -430,9 +456,6 @@
       return true;
     }
 
-    // -------------------
-    // Invoice & Payment Logic
-    // -------------------
     buyBtn.addEventListener('click', async () => {
       console.log('Buy button clicked');
       await showInvoice();
@@ -447,8 +470,8 @@
       const qty = Math.max(1, parseInt(qtyInput.value) || 1);
       const cur = currencySelect.value;
       const unit = prices[cur];
-      const total = qty * unit;
       const decimals = cur === 'USDT' ? 2 : 6;
+      const total = qty * unit;
 
       invoiceDetails.innerHTML = `
         <div><b>Item</b>: TIFFY Token Presale</div>
@@ -471,7 +494,6 @@
       proceedBtn.onclick = async () => {
         console.log('Proceed to payment clicked, currency:', cur);
         invoiceModal.classList.remove('show');
-        console.log('Calling showPaymentModal for:', cur);
         await showPaymentModal(cur, qty, total);
       };
     }
@@ -525,7 +547,7 @@
         }
 
         paymentModal.classList.add('show');
-        console.log('Payment modal opened for:', currency);
+        console.log('Payment modal opened for:', currency, 'Wallet:', walletType);
 
         const qrText = `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}${currency !== 'BNB' ? `&contract=${TOKEN_ADDRESSES[currency]}` : ''}`;
         paymentQR.innerHTML = '';
@@ -558,15 +580,31 @@
         };
 
         openInWallet.onclick = () => {
-          console.log('Open wallet clicked');
-          const link = currency === 'BNB'
-            ? `https://metamask.app.link/send/${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
-            : `https://metamask.app.link/send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+          console.log('Open wallet clicked, wallet:', walletType);
+          let link;
+          if (walletType === 'metamask') {
+            link = currency === 'BNB'
+              ? `metamask://send/${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
+              : `metamask://send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+          } else if (walletType === 'trust') {
+            link = currency === 'BNB'
+              ? `trust://send/${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
+              : `trust://send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+          } else if (walletType === 'okx') {
+            link = currency === 'BNB'
+              ? `okx://wallet/dapp/send?address=${recipientAddress}&chainId=${BSC_CHAIN_ID}&amount=${totalAmount}`
+              : `okx://wallet/dapp/send?contractAddress=${TOKEN_ADDRESSES[currency]}&chainId=${BSC_CHAIN_ID}&to=${recipientAddress}&amount=${totalAmount}`;
+          } else {
+            link = currency === 'BNB'
+              ? `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
+              : `ethereum:${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+          }
+          console.log('Opening wallet with link:', link);
           window.open(link, '_blank');
         };
 
         confirmManualBtn.onclick = async () => {
-          console.log('Confirm payment clicked for:', currency);
+          console.log('Confirm payment clicked for:', currency, 'Wallet:', walletType);
           paymentModal.classList.remove('show');
           if (bnbBalance < totalBNBNeeded) {
             alert(`Insufficient BNB for payment and gas. Need ${toFixedTrim(totalBNBNeeded, 6)} BNB, but you have ${toFixedTrim(bnbBalance, 6)} BNB.`);
@@ -705,10 +743,16 @@
 
     (async () => {
       console.log('Initializing Web3');
-      if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
+      const provider = await detectProvider();
+      if (provider) {
+        web3 = new Web3(provider);
         console.log('Web3 initialized');
         initEventListeners();
+        // Auto-connect for mobile wallets
+        if (walletType === 'trust' || walletType === 'okx') {
+          console.log(`Auto-connecting ${walletType} wallet`);
+          await connectWallet();
+        }
       } else {
         console.error('No Ethereum provider detected');
         alert('Please install MetaMask, Trust Wallet, or OKX Wallet to use this page.');
