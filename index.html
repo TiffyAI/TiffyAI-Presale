@@ -1,385 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>TiffyAI Presale — Checkout</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <style>
-    :root {
-      --accent1: #00f0ff;
-      --accent2: #ff00d4;
-      --glass: rgba(255,255,255,0.06);
-      --glass-border: rgba(255,255,255,0.12);
-      --muted: rgba(255,255,255,0.85);
-    }
-    body {
-      margin: 0;
-      font-family: Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      background: url('Presale1.jpg') center/cover fixed no-repeat;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 18px;
-    }
-    .wrap {
-      width: 100%;
-      max-width: 820px;
-      border-radius: 16px;
-      padding: 22px;
-      background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.18));
-      border: 1px solid rgba(255,255,255,0.04);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px);
-    }
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .logo { width: 64px; height: 64px; border-radius: 12px; background: linear-gradient(135deg, var(--accent1), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: #001; }
-    h1 { margin: 0; font-size: 20px; }
-    p.lead { margin: 4px 0 0 0; opacity: 0.95; font-size: 13px; }
-    .controls { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; align-items: center; justify-content: center; }
-    select, input[type="number"] {
-      padding: 12px; border-radius: 10px; border: none; background: rgba(255,255,255,0.04); color: var(--muted); font-size: 16px; min-width: 170px;
-    }
-    .btn {
-      padding: 12px 18px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; font-size: 16px;
-    }
-    .connect { background: rgba(255,255,255,0.06); color: #fff; }
-    .buy { background: linear-gradient(135deg, var(--accent1), var(--accent2)); color: #062; }
-    #amountDisplay { margin-top: 14px; text-align: center; font-weight: 800; color: var(--accent1); font-size: 18px; }
-    .modal {
-      position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-      width: 96%; max-width: 520px; border-radius: 14px; padding: 18px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-      border: 1px solid var(--glass-border); backdrop-filter: blur(10px); box-shadow: 0 30px 80px rgba(0,0,0,0.7);
-      z-index: 1000; display: none;
-    }
-    .modal.show { display: block; }
-    .addr { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; font-size: 18px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 12px; word-break: break-all; color: #e8fbff; }
-    .row { display: flex; justify-content: space-between; margin: 8px 0; }
-    .actions { display: flex; gap: 10px; margin-top: 12px; justify-content: space-between; }
-    .copy, .cancel, .proceed { padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
-    .copy { background: rgba(255,255,255,0.04); }
-    .cancel { background: #222; color: #fff; border: 1px solid #444; }
-    .proceed { background: linear-gradient(90deg, #00ffcc, #00aaff); color: #000; }
-    .qr { width: 120px; height: 120px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); font-size: 12px; color: rgba(255,255,255,0.6); }
-    .muted { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 8px; text-align: center; }
-    @media (max-width: 520px) {
-      .logo { width: 56px; height: 56px; }
-      .addr { font-size: 20px; padding: 18px; }
-      .qr { width: 136px; height: 136px; }
-      .modal { padding: 16px; border-radius: 12px; }
-      .btn { font-size: 16px; padding: 12px 14px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TiffyAI Purchase</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .purchase-form { display: flex; flex-direction: column; gap: 10px; }
+        .quantity-input { padding: 5px; width: 100px; }
+        .invoice-popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .popup-content { background: white; margin: 50px auto; padding: 20px; width: 400px; border-radius: 8px; }
+        .payment-options { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .payment-option { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .payment-option.selected { border-color: #007bff; background: #f0f8ff; }
+        .proceed-btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .proceed-btn:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">TI</div>
-        <div>
-          <h1>TiffyAI — Presale Checkout</h1>
-          <p class="lead">Buy TIFFY tokens — $1 presale (0.001 BNB per token)</p>
+    <h1>Buy TiffyAI Tokens</h1>
+    <div class="purchase-form">
+        <label for="quantity">How many TiffyAI tokens do you want to buy?</label>
+        <input type="number" id="quantity" class="quantity-input" min="1" value="1">
+        <button onclick="generateInvoice()">Generate Invoice</button>
+    </div>
+
+    <div id="invoicePopup" class="invoice-popup">
+        <div class="popup-content">
+            <h2>Invoice</h2>
+            <p id="invoiceDetails"></p>
+            <div class="payment-options">
+                <div class="payment-option" onclick="selectPayment('BNB')">
+                    <input type="radio" id="bnb" name="payment" value="BNB" checked>
+                    <label for="bnb">BNB (Binance Smart Chain)</label>
+                </div>
+                <div class="payment-option" onclick="selectPayment('ETH')">
+                    <input type="radio" id="eth" name="payment" value="ETH">
+                    <label for="eth">ETH (Ethereum)</label>
+                </div>
+                <div class="payment-option" onclick="selectPayment('USDT')">
+                    <input type="radio" id="usdt" name="payment" value="USDT">
+                    <label for="usdt">USDT (ERC-20)</label>
+                </div>
+            </div>
+            <button id="proceedBtn" class="proceed-btn" onclick="proceedToPayment()" disabled>Proceed to Payment</button>
+            <button onclick="closePopup()">Cancel</button>
         </div>
-      </div>
-      <div id="userMeta" style="text-align: right;">
-        <div id="addrDisplay">Not connected</div>
-        <div id="statusSmall" style="font-size: 12px; opacity: 0.85;">Ready</div>
-      </div>
     </div>
-    <div class="controls">
-      <select id="currency">
-        <option value="BNB">BNB (native)</option>
-        <option value="USDT">USDT (BEP-20)</option>
-        <option value="BTCB">BTCB (BEP-20)</option>
-      </select>
-      <input id="qty" type="number" min="1" value="1" />
-      <button id="connectBtn" class="btn connect">Connect Wallet</button>
-      <button id="buyBtn" class="btn buy">Create Invoice</button>
-    </div>
-    <div id="amountDisplay">Total: 0.001 BNB</div>
-    <div class="muted">Select amount and currency, then create an invoice to pay.</div>
-  </div>
-  <div id="payModal" class="modal" role="dialog" aria-hidden="true">
-    <h3>Confirm Payment</h3>
-    <div class="row"><div>Tokens</div><div id="modalQty">-</div></div>
-    <div class="row"><div>Currency</div><div id="modalCurrency">-</div></div>
-    <div class="row"><div>Amount</div><div idBoebert="modalAmount">-</div></div>
-    <div class="row"><div>USD Value</div><div id="modalUSD">-</div></div>
-    <div class="row"><div>Pay to Address</div><div id="modalAddress" class="addr">-</div></div>
-    <div class="row"><div>QR Code</div><div class="qr" id="qrPlaceholder">QR</div></div>
-    <div class="muted" id="modalExpires">Invoice expires in: -</div>
-    <div class="actions">
-      <button class="copy" id="copyAddr">Copy Address</button>
-      <button class="copy" id="copyAmount">Copy Amount</button>
-      <button class="cancel" id="cancelBtn">Cancel</button>
-      <button class="proceed" id="proceedBtn">Proceed with Payment</button>
-    </div>
-  </div>
-  <script>
-    const API_BASE = 'https://your-actual-backend.com'; // REPLACE WITH YOUR BACKEND URL
-    let web3, account;
 
-    const currencyEl = document.getElementById('currency');
-    const qtyEl = document.getElementById('qty');
-    const connectBtn = document.getElementById('connectBtn');
-    const buyBtn = document.getElementById('buyBtn');
-    const amountDisplay = document.getElementById('amountDisplay');
-    const addrDisplay = document.getElementById('addrDisplay');
-    const statusSmall = document.getElementById('statusSmall');
-    const payModal = document.getElementById('payModal');
-    const modalQty = document.getElementById('modalQty');
-    const modalCurrency = document.getElementById('modalCurrency');
-    const modalAmount = document.getElementById('modalAmount');
-    const modalUSD = document.getElementById('modalUSD');
-    const modalAddress = document.getElementById('modalAddress');
-    const modalExpires = document.getElementById('modalExpires');
-    const qrPlaceholder = document.getElementById('qrPlaceholder');
-    const copyAddr = document.getElementById('copyAddr');
-    const copyAmount = document.getElementById('copyAmount');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const proceedBtn = document.getElementById('proceedBtn');
+    <script>
+        let selectedQuantity = 0;
+        let selectedPayment = 'BNB';
 
-    async function fetchBNBPriceUSD() {
-      try {
-        const resp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd');
-        const data = await resp.json();
-        return parseFloat(data.binancecoin.usd);
-      } catch {
-        return null;
-      }
-    }
-
-    function updateAmount() {
-      const qty = Math.max(1, parseInt(qtyEl.value) || 1);
-      const cur = currencyEl.value;
-      const prices = { BNB: 0.001, USDT: 1.0, BTCB: 0.000014 };
-      const total = qty * (prices[cur] || 0);
-      const fmt = cur === 'USDT' ? total.toFixed(2) : total.toFixed(6);
-      amountDisplay.innerText = `Total: ${fmt} ${cur}`;
-    }
-    currencyEl.addEventListener('change', updateAmount);
-    qtyEl.addEventListener('input', updateAmount);
-    updateAmount();
-
-    connectBtn.addEventListener('click', async () => {
-      if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask or a Web3 wallet.');
-        return;
-      }
-      try {
-        web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        account = accounts[0];
-        const chainId = await web3.eth.getChainId();
-        if (chainId !== 56) {
-          try {
-            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
-          } catch {
-            alert('Please switch to BNB Smart Chain.');
-            return;
-          }
-        }
-        addrDisplay.innerText = `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`;
-        statusSmall.innerText = 'Wallet connected';
-        connectBtn.innerText = 'Connected';
-      } catch (e) {
-        alert('Wallet connect failed: ' + (e.message || e));
-      }
-    });
-
-    buyBtn.addEventListener('click', async () => {
-      if (!account) {
-        const ok = confirm('Connect wallet to continue?');
-        if (!ok) return;
-        await connectBtn.click();
-        if (!account) return;
-      }
-
-      const currency = currencyEl.value;
-      const qty = Math.max(1, parseInt(qtyEl.value) || 1);
-      try {
-        buyBtn.disabled = true;
-        statusSmall.innerText = 'Creating invoice...';
-        const resp = await fetch(`${API_BASE}/create-invoice`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: account, currency, qty })
-        });
-        if (!resp.ok) {
-          const errorData = await resp.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${resp.status}: Failed to create invoice`);
-        }
-        const data = await resp.json();
-        if (!data.invoiceId || !data.payToAddress || !data.amount || !data.currency || !data.expiresAt) {
-          throw new Error('Invalid invoice response');
+        function generateInvoice() {
+            selectedQuantity = parseInt(document.getElementById('quantity').value) || 1;
+            if (selectedQuantity < 1) {
+                alert('Please select a valid quantity.');
+                return;
+            }
+            // Assume price per token is 0.01 BNB or equivalent; adjust as needed
+            const pricePerToken = 0.01;
+            const totalAmount = selectedQuantity * pricePerToken;
+            document.getElementById('invoiceDetails').innerHTML = `
+                <p>Quantity: ${selectedQuantity} TiffyAI Tokens</p>
+                <p>Price per Token: ${pricePerToken} BNB</p>
+                <p>Total: ${totalAmount} BNB</p>
+                <p>Payment Method: Select below</p>
+            `;
+            document.getElementById('proceedBtn').disabled = true;
+            document.getElementById('invoicePopup').style.display = 'block';
+            selectPayment('BNB'); // Default to BNB
         }
 
-        const bnbUSD = await fetchBNBPriceUSD();
-        const usdValue = currency === 'BNB' && bnbUSD ? (data.amount * bnbUSD).toFixed(2) : currency === 'USDT' ? data.amount.toFixed(2) : '-';
-        modalQty.innerText = `${qty} TIFFY`;
-        modalCurrency.innerText = currency;
-        modalAmount.innerText = `${data.amount} ${currency}`;
-        modalUSD.innerText = `$${usdValue}`;
-        modalAddress.innerText = data.payToAddress;
-        modalExpires.innerText = `Expires at ${new Date(data.expiresAt).toLocaleString()}`;
-        qrPlaceholder.innerText = data.qr || 'QR';
-        payModal.classList.add('show');
-        payModal.dataset.invoiceId = data.invoiceId;
-        statusSmall.innerText = 'Invoice created';
-      } catch (err) {
-        console.error('Invoice error:', err);
-        statusSmall.innerText = 'Error: Unable to create invoice';
-        alert(`Failed to create invoice: ${err.message || 'Unknown error'}`);
-      } finally {
-        buyBtn.disabled = false;
-      }
-    });
-
-    copyAddr.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(modalAddress.innerText);
-        copyAddr.innerText = 'Copied';
-        setTimeout(() => copyAddr.innerText = 'Copy Address', 1200);
-      } catch {
-        alert('Copy failed');
-      }
-    });
-
-    copyAmount.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(modalAmount.innerText.split(' ')[0]);
-        copyAmount.innerText = 'Copied';
-        setTimeout(() => copyAmount.innerText = 'Copy Amount', 1200);
-      } catch {
-        alert('Copy failed');
-      }
-    });
-
-    cancelBtn.addEventListener('click', () => {
-      payModal.classList.remove('show');
-    });
-
-    proceedBtn.addEventListener('click', async () => {
-      const invoiceId = payModal.dataset.invoiceId;
-      const currency = modalCurrency.innerText;
-      if (currency === 'BNB') {
-        try {
-          proceedBtn.disabled = true;
-          statusSmall.innerText = 'Sending payment...';
-          const amount = modalAmount.innerText.split(' ')[0];
-          const payToAddress = modalAddress.innerText;
-          const tx = await web3.eth.sendTransaction({
-            from: account,
-            to: payToAddress,
-            value: web3.utils.toWei(amount, 'ether')
-          });
-          statusSmall.innerText = 'Payment sent, verifying...';
-          await submitTx(invoiceId, tx.transactionHash);
-        } catch (err) {
-          console.error('Payment error:', err);
-          statusSmall.innerText = 'Payment failed';
-          alert(`Payment failed: ${err.message || 'Unknown error'}`);
-          proceedBtn.disabled = false;
+        function selectPayment(method) {
+            selectedPayment = method;
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.closest('.payment-option').classList.add('selected');
+            document.querySelector(`input[value="${method}"]`).checked = true;
+            document.getElementById('proceedBtn').disabled = false;
         }
-      } else {
-        statusSmall.innerText = 'Please send payment manually and wait for confirmation.';
-        pollInvoiceStatus(invoiceId);
-      }
-    });
 
-    async function submitTx(invoiceId, txHash) {
-      try {
-        const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/submit-tx`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ txHash })
-        });
-        if (!resp.ok) {
-          const errorData = await resp.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Submit failed');
+        function closePopup() {
+            document.getElementById('invoicePopup').style.display = 'none';
         }
-        pollInvoiceStatus(invoiceId);
-      } catch (err) {
-        console.error('Submit error:', err);
-        alert('Submit failed: ' + err.message);
-        statusSmall.innerText = 'Submit failed';
-      }
-    }
 
-    let polling = {};
-    function pollInvoiceStatus(invoiceId) {
-      if (polling[invoiceId]) return;
-      let errorCount = 0;
-      const maxErrors = 5;
-      polling[invoiceId] = setInterval(async () => {
-        try {
-          const resp = await fetch(`${API_BASE}/invoice/${invoiceId}`);
-          if (!resp.ok) {
-            const errorData = await resp.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP ${resp.status}: Failed to fetch status`);
-          }
-          const data = await resp.json();
-          statusSmall.innerText = `Invoice: ${data.status}`;
-          if (data.status === 'paid') {
-            statusSmall.innerText = 'Payment confirmed, rewarding...';
-            await triggerReward(invoiceId);
-          } else if (data.status === 'rewarded') {
-            clearInterval(polling[invoiceId]);
-            delete polling[invoiceId];
-            payModal.classList.remove('show');
-            alert('Tokens issued! Redirecting...');
-            window.location.href = '/Blue-Key-Claim';
-          } else if (data.status === 'expired' || data.status === 'failed') {
-            clearInterval(polling[invoiceId]);
-            delete polling[invoiceId];
-            payModal.classList.remove('show');
-            alert(`Invoice closed: ${data.status}`);
-          }
-          errorCount = 0;
-        } catch (err) {
-          console.error('Poll error:', err);
-          errorCount++;
-          statusSmall.innerText = `Status check failed (${errorCount}/${maxErrors})`;
-          if (errorCount >= maxErrors) {
-            clearInterval(polling[invoiceId]);
-            delete polling[invoiceId];
-            payModal.classList.remove('show');
-            alert('Stopped checking invoice due to errors.');
-          }
-        }
-      }, 6000);
-    }
+        function proceedToPayment() {
+            if (selectedQuantity < 1) return;
 
-    async function triggerReward(invoiceId) {
-      try {
-        const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/reward`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
-        if (!resp.ok) {
-          const errorData = await resp.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Reward failed');
-        }
-        const data = await resp.json();
-        if (data.success) {
-          window.location.href = '/Blue-Key-Claim';
-        }
-      } catch (err) {
-        console.error('Reward error:', err);
-        statusSmall.innerText = 'Reward failed, awaiting server confirmation';
-      }
-    }
+            // Simulate payment initiation (in real app, integrate with Web3/wallet like MetaMask or WalletConnect)
+            // For demo: Alert with details; replace with actual payment flow
+            const walletAddress = prompt('Enter your wallet address for payment:'); // In real: get from connected wallet
+            if (!walletAddress) return;
 
-    window.addEventListener('click', (e) => {
-      if (payModal.classList.contains('show') && !payModal.contains(e.target) && !e.target.closest('#buyBtn')) {
-        payModal.classList.remove('show');
-      }
-    });
-  </script>
+            alert(`Initiating payment of ${selectedQuantity * 0.01} ${selectedPayment} to contract...\nWallet: ${walletAddress}\n\nAfter confirmation, redirecting...`);
+
+            // Simulate payment success and redirect
+            // In real: Listen for transaction confirmation, then redirect
+            setTimeout(() => {
+                // Backend will handle token send AFTER redirect (e.g., via route handler on /Blue-Key-Claim checking payment)
+                window.location.href = '/Blue-Key-Claim?quantity=' + selectedQuantity + '&payment=' + selectedPayment + '&wallet=' + encodeURIComponent(walletAddress);
+            }, 2000);
+        }
+
+        // Close popup on outside click
+        window.onclick = function(event) {
+            const popup = document.getElementById('invoicePopup');
+            if (event.target === popup) {
+                closePopup();
+            }
+        }
+    </script>
 </body>
 </html>
