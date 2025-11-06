@@ -1,306 +1,508 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TiffyAI Purchase</title>
-    <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f4f7fa;
-            color: #1a1a1a;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
-            text-align: center;
-            color: #2c3e50;
-        }
-        .purchase-form {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .quantity-input {
-            padding: 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            width: 100px;
-        }
-        .generate-btn {
-            background: #2563eb;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .generate-btn:hover {
-            background: #1d4ed8;
-        }
-        .invoice-popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .popup-content {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
-        .popup-content h2 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        .invoice-details {
-            font-size: 14px;
-            color: #4b5563;
-            margin-bottom: 20px;
-        }
-        .payment-options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .payment-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .payment-option:hover {
-            border-color: #2563eb;
-            background: #eff6ff;
-        }
-        .payment-option.selected {
-            border-color: #2563eb;
-            background: #dbeafe;
-        }
-        .proceed-btn {
-            background: #2563eb;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            width: 100%;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .proceed-btn:disabled {
-            background: #d1d5db;
-            cursor: not-allowed;
-        }
-        .proceed-btn:hover:not(:disabled) {
-            background: #1d4ed8;
-        }
-        .cancel-btn {
-            background: #f3f4f6;
-            color: #4b5563;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            width: 100%;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .wallet-status {
-            font-size: 14px;
-            color: #16a34a;
-            margin-bottom: 10px;
-        }
-        .wallet-status.error {
-            color: #dc2626;
-        }
-    </style>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <meta charset="utf-8" />
+  <title>TiffyAI Presale Checkout — $1 Presale</title>
+
+  <!-- web3 -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --accent1: #00f0ff;
+      --accent2: #ff00d4;
+      --white-soft: rgba(255,255,255,0.95);
+    }
+    html,body{height:100%; margin:0;}
+    body{
+      background: url('Presale1.jpg') center/cover fixed no-repeat;
+      font-family: Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: var(--white-soft);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .card {
+      width:100%;
+      max-width:820px;
+      border-radius:18px;
+      padding:28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.04);
+      backdrop-filter: blur(6px);
+    }
+
+    .header {
+      display:flex;
+      align-items:center;
+      gap:18px;
+      justify-content:space-between;
+    }
+
+    .brand {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .logo {
+      width:66px;
+      height:66px;
+      border-radius:14px;
+      background: linear-gradient(135deg,var(--accent1),var(--accent2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      font-size:20px;
+      box-shadow: 0 6px 28px rgba(0,240,255,0.12);
+    }
+
+    h1 { margin:0; font-size:20px; letter-spacing:0.6px; }
+    p.lead { margin:6px 0 0 0; opacity:0.9; font-size:14px; }
+
+    .controls {
+      display:flex;
+      gap:18px;
+      margin-top:18px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    select, input[type="number"]{
+      -webkit-appearance:none;
+      appearance:none;
+      border:none;
+      outline:none;
+      padding:14px 14px;
+      border-radius:12px;
+      font-size:18px;
+      background: rgba(255,255,255,0.04);
+      color:var(--white-soft);
+      min-width:180px;
+      box-shadow: inset 0 -4px 30px rgba(0,0,0,0.25);
+    }
+
+    .big {
+      font-size:22px;
+      font-weight:600;
+      padding:16px 20px;
+      border-radius:14px;
+      cursor:pointer;
+      border:none;
+      color:white;
+      background: linear-gradient(135deg,var(--accent1),var(--accent2));
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform .12s ease, box-shadow .12s ease;
+      min-width:220px;
+    }
+    .big:active{ transform: translateY(2px); }
+
+    #amountDisplay {
+      margin-top:16px;
+      font-size:20px;
+      color:var(--accent1);
+      text-shadow: 0 0 12px rgba(255,0,212,0.08);
+      font-weight:700;
+      text-align:center;
+    }
+
+    /* Glass payment modal */
+    .payment-modal {
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      max-width:520px;
+      width:94%;
+      border-radius:16px;
+      padding:20px;
+      border:1px solid var(--glass-border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      backdrop-filter: blur(10px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+      z-index:2000;
+      display:none;
+    }
+
+    .payment-modal.show { display:block; }
+
+    .payment-row { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .address-box {
+      flex:1 1 100%;
+      margin-top:12px;
+      background: rgba(0,0,0,0.28);
+      border-radius:12px;
+      padding:16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+      font-size:16px;
+      color: #e8f9ff;
+      word-break:break-all;
+    }
+
+    .payment-qr {
+      width:120px;
+      height:120px;
+      border-radius:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      color:rgba(255,255,255,0.6);
+      border:1px dashed rgba(255,255,255,0.06);
+    }
+
+    .modal-actions {
+      display:flex;
+      gap:12px;
+      margin-top:14px;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .copy-btn, .open-wallet-btn {
+      padding:12px 14px;
+      border-radius:12px;
+      border:none;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:600;
+    }
+    .copy-btn{ background: rgba(255,255,255,0.06); color:var(--white-soft); }
+    .open-wallet-btn{ background: linear-gradient(135deg,var(--accent1),var(--accent2)); color:white; box-shadow: 0 12px 30px rgba(0,240,255,0.06); }
+
+    .small-muted { font-size:13px; opacity:0.85; margin-top:8px; }
+
+    /* Mobile bigger taps and font scaling */
+    @media (max-width:520px){
+      .logo{ width:56px; height:56px; font-size:18px; border-radius:12px; }
+      h1{ font-size:18px; }
+      .big{ font-size:18px; min-width: 180px; padding:14px; }
+      select, input[type="number"]{ min-width:140px; font-size:16px; padding:12px; }
+      .address-box { font-size:18px; padding:18px; border-radius:14px;}
+      .payment-qr { width:140px; height:140px; }
+      .payment-modal { padding:18px; border-radius:14px; }
+    }
+  </style>
 </head>
 <body>
-    <h1>Buy TiffyAI Tokens</h1>
-    <div class="purchase-form">
-        <label for="quantity">Number of TiffyAI Tokens</label>
-        <input type="number" id="quantity" class="quantity-input" min="1" value="1">
-        <button class="generate-btn" onclick="generateInvoice()">Generate Invoice</button>
-    </div>
 
-    <div id="invoicePopup" class="invoice-popup">
-        <div class="popup-content">
-            <h2>Invoice</h2>
-            <div id="walletStatus" class="wallet-status"></div>
-            <div id="invoiceDetails" class="invoice-details"></div>
-            <div class="payment-options">
-                <div class="payment-option selected" onclick="selectPayment('BNB')">
-                    <input type="radio" id="bnb" name="payment" value="BNB" checked>
-                    <label for="bnb">BNB (Binance Smart Chain)</label>
-                </div>
-                <div class="payment-option" onclick="selectPayment('BTCB')">
-                    <input type="radio" id="btcb" name="payment" value="BTCB">
-                    <label for="btcb">BTCB (BEP-20)</label>
-                </div>
-            </div>
-            <button id="proceedBtn" class="proceed-btn" disabled>Proceed to Payment</button>
-            <button class="cancel-btn" onclick="closePopup()">Cancel</button>
+  <div class="card">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">TI</div>
+        <div>
+          <h1>Queen TiffyAI — Presale Checkout</h1>
+          <p class="lead">Buy TIFFY tokens now — $1 presale (0.001 BNB)</p>
         </div>
+      </div>
+
+      <div id="walletInfo" style="text-align:right;">
+        <div id="connectedAddr" style="font-size:14px; opacity:0.9;">Not connected</div>
+        <div id="chainInfo" style="font-size:13px; opacity:0.75;">Chain: Unknown</div>
+      </div>
     </div>
 
-    <script>
-        let selectedQuantity = 0;
-        let selectedPayment = 'BNB';
-        let walletAddress = null;
-        let provider = null;
+    <div class="controls">
+      <select id="currencySelect">
+        <option value="BNB">BNB (native)</option>
+        <option value="USDT">USDT (BEP-20)</option>
+        <option value="BTCB">BTCB (BEP-20)</option>
+      </select>
 
-        // BNB Chain configuration
-        const bnbChain = {
-            chainId: '0x38', // 56 in hex
-            chainName: 'Binance Smart Chain Mainnet',
-            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-            blockExplorerUrls: ['https://bscscan.com']
+      <input id="qtyInput" type="number" min="1" value="1" />
+
+      <button id="connectBtn" class="big">Connect Wallet</button>
+      <button id="buyBtn" class="big" style="background:linear-gradient(135deg,#64d7ff,#e95cff)">Buy for $1</button>
+    </div>
+
+    <div id="amountDisplay">Total: 0.001 BNB</div>
+
+    <div style="margin-top:18px; text-align:center;">
+      <div class="small-muted">Tip: MetaMask/Trust Wallet required for on-chain purchase. You will approve the transaction in your wallet.</div>
+    </div>
+  </div>
+
+  <!-- Payment modal -->
+  <div id="paymentModal" class="payment-modal" role="dialog" aria-hidden="true">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-weight:800; font-size:18px;">Send payment</div>
+      <div style="opacity:0.9; font-size:13px;" id="modalCurrency">BNB</div>
+    </div>
+
+    <div class="payment-row">
+      <div class="address-box" id="modalAddress">—</div>
+
+      <div style="display:flex; flex-direction:column; gap:8px; margin-left:12px; align-items:center;">
+        <div class="payment-qr" id="modalQR">QR</div>
+        <button class="open-wallet-btn" id="openInWallet">Open wallet</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <div style="display:flex; gap:8px;">
+        <button class="copy-btn" id="copyAddrBtn">Copy address</button>
+        <button class="copy-btn" id="copyAmountBtn">Copy amount</button>
+      </div>
+      <div style="text-align:right;">
+        <button class="big" id="confirmManualBtn" style="min-width:150px;background:linear-gradient(135deg,#6ef7b7,#76b6ff);">I Paid — check tx</button>
+      </div>
+    </div>
+
+    <div id="modalNotice" class="small-muted">After you send the exact amount, click <b>I Paid</b>. We will verify the transaction and finalize your claim.</div>
+  </div>
+
+  <script>
+    // -------------------
+    // CONFIG - change as needed
+    // -------------------
+    const recipientAddress = '0xed9b43bED20B063ae0966C0AEC446bc755fB84bA'; // your receiving wallet
+    // Standard BEP-20 token addresses on BSC mainnet (verify and replace if you prefer)
+    const TOKEN_ADDRESSES = {
+      USDT: '0x55d398326f99059fF775485246999027B3197955',  // USDT (BEP-20) — verify before using. :contentReference[oaicite:2]{index=2}
+      BTCB: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c'   // BTCB (Binance-Peg) — verify. :contentReference[oaicite:3]{index=3}
+    };
+    const TOKEN_DECIMALS = { USDT: 18, BTCB: 18 };
+
+    // Price configuration: user requested 0.001 = $1 (for BNB). Token prices per unit are set to produce $1 per item.
+    const prices = {
+      BNB: 0.001,        // exactly 0.001 BNB per item (user requested)
+      USDT: 1.00,        // 1 USDT per item
+      BTCB: 0.000014     // example: set so each item ~ $1 (replace with exact if needed)
+    };
+
+    // Minimal ERC20 ABI for transfer
+    const ERC20_ABI = [
+      { "constant": false, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [ { "name": "", "type": "bool" } ], "type": "function" },
+      { "constant": true, "inputs": [], "name": "decimals", "outputs": [ { "name": "", "type": "uint8" } ], "type": "function" }
+    ];
+
+    // -------------------
+    // UI & helpers
+    // -------------------
+    const connectBtn = document.getElementById('connectBtn');
+    const buyBtn = document.getElementById('buyBtn');
+    const currencySelect = document.getElementById('currencySelect');
+    const qtyInput = document.getElementById('qtyInput');
+    const amountDisplay = document.getElementById('amountDisplay');
+    const paymentModal = document.getElementById('paymentModal');
+    const modalAddress = document.getElementById('modalAddress');
+    const modalCurrency = document.getElementById('modalCurrency');
+    const copyAddrBtn = document.getElementById('copyAddrBtn');
+    const copyAmountBtn = document.getElementById('copyAmountBtn');
+    const openInWallet = document.getElementById('openInWallet');
+    const confirmManualBtn = document.getElementById('confirmManualBtn');
+    const connectedAddrEl = document.getElementById('connectedAddr');
+    const chainInfo = document.getElementById('chainInfo');
+
+    let web3, userAccount, currentChainId;
+
+    function toFixedTrim(n, decimals=6) {
+      return parseFloat(n).toFixed(decimals).replace(/\.?0+$/, '');
+    }
+
+    function updateAmountDisplay(){
+      const qty = Math.max(1, parseInt(qtyInput.value) || 1);
+      const cur = currencySelect.value;
+      const unit = prices[cur];
+      // For tokens that are whole numbers (e.g., USDT), show 2 decimals
+      const decimals = (cur === 'USDT') ? 2 : 6;
+      const total = (qty * unit);
+      const show = (cur === 'BNB') ? `${toFixedTrim(total, 6)} BNB` : `${toFixedTrim(total, 6)} ${cur}`;
+      amountDisplay.innerText = `Total: ${show}`;
+    }
+
+    currencySelect.addEventListener('change', updateAmountDisplay);
+    qtyInput.addEventListener('input', updateAmountDisplay);
+    updateAmountDisplay();
+
+    // -------------------
+    // Wallet connect & chain handling
+    // -------------------
+    async function connectWallet(){
+      if (typeof window.ethereum === 'undefined') {
+        alert('No Web3 wallet detected. Please install MetaMask or use a Web3 wallet.');
+        return;
+      }
+      web3 = new Web3(window.ethereum);
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        connectedAddrEl.innerText = `Connected: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}`;
+        currentChainId = await web3.eth.getChainId();
+        chainInfo.innerText = `Chain ID: ${currentChainId}`;
+        connectBtn.innerText = 'Wallet Connected';
+        // Listen for account/chain changes
+        window.ethereum.on('accountsChanged', (accs) => { userAccount = accs[0]; connectedAddrEl.innerText = userAccount ? `Connected: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}` : 'Not connected'; });
+        window.ethereum.on('chainChanged', (chainHex) => { currentChainId = parseInt(chainHex,16); chainInfo.innerText = `Chain ID: ${currentChainId}`; });
+      } catch (err) {
+        console.error('connect error', err);
+      }
+    }
+
+    connectBtn.addEventListener('click', connectWallet);
+
+    // Prompt wallet to switch to BSC mainnet (chainId 56) if not on BSC
+    async function ensureBSC(){
+      if (!web3) await connectWallet();
+      const chainId = await web3.eth.getChainId();
+      if (chainId !== 56) {
+        // ask to switch
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x38' }] // 56
+          });
+          currentChainId = 56;
+          chainInfo.innerText = `Chain ID: ${currentChainId}`;
+          return true;
+        } catch (switchError) {
+          // If the chain is not added to the user's wallet, you could request to add it.
+          console.warn('Failed to switch chain', switchError);
+          alert('Please switch your wallet network to BSC (BNB Smart Chain) and try again.');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // -------------------
+    // Payments
+    // -------------------
+    buyBtn.addEventListener('click', handleBuy);
+
+    async function handleBuy(){
+      const cur = currencySelect.value;
+      const qty = Math.max(1, parseInt(qtyInput.value)||1);
+
+      // auto-switch to BSC
+      const ok = await ensureBSC();
+      if (!ok) return;
+
+      if (cur === 'BNB') {
+        // Native BNB send
+        const totalBNB = (prices.BNB * qty).toString(); // e.g., 0.001 * qty
+        await sendBNB(totalBNB);
+      } else {
+        // Token transfer flow (USDT, BTCB) — show modal and allow quick "send" via wallet
+        await showTokenModal(cur, qty);
+      }
+    }
+
+    async function sendBNB(amountBNB){
+      if (!userAccount) await connectWallet();
+      try {
+        const valueWei = web3.utils.toWei(amountBNB, 'ether'); // BNB uses 18 decimals like ether
+        const tx = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: recipientAddress,
+            value: web3.utils.toHex(valueWei)
+          }]
+        });
+        // tx is a hash string
+        alert('BNB transaction submitted. Tx: ' + tx);
+        // Redirect or show success — you asked to redirect to /Blue-Key-Claim
+        window.location.href = '/Blue-Key-Claim';
+      } catch (err) {
+        console.error('BNB send failed', err);
+        alert('Transaction failed or canceled.');
+      }
+    }
+
+    // Show modal to guide token transfer and optionally auto-send via contract (create and submit transfer tx)
+    async function showTokenModal(tokenSymbol, qty){
+      const decimals = TOKEN_DECIMALS[tokenSymbol] || 18;
+      const tokenAddr = TOKEN_ADDRESSES[tokenSymbol];
+      const unit = prices[tokenSymbol];
+      const totalAmount = (unit * qty);
+
+      // show modal
+      modalCurrency.innerText = tokenSymbol;
+      modalAddress.innerText = `${recipientAddress}\n\nAmount: ${totalAmount} ${tokenSymbol}`;
+      paymentModal.classList.add('show');
+
+      // copy handlers
+      copyAddrBtn.onclick = async () => {
+        await navigator.clipboard.writeText(recipientAddress);
+        copyAddrBtn.innerText = 'Copied!';
+        setTimeout(()=>copyAddrBtn.innerText='Copy address',1200);
+      };
+      copyAmountBtn.onclick = async () => {
+        await navigator.clipboard.writeText(totalAmount.toString());
+        copyAmountBtn.innerText = 'Copied!';
+        setTimeout(()=>copyAmountBtn.innerText='Copy amount',1200);
+      };
+
+      // open wallet deep-link — for many wallets this will open the wallet app if supported (example)
+      openInWallet.onclick = () => {
+        // This opens a generic deep link for metamask: metamask:// but many mobile wallets accept universal links.
+        // We won't rely on this; it's a convenience for mobile users.
+        const link = `https://metamask.app.link/send/${recipientAddress}?amount=${totalAmount}&chain=56`;
+        window.open(link, '_blank');
+      };
+
+      // Confirm manual: user says they paid; you should verify server-side by tx hash or scanning chain.
+      confirmManualBtn.onclick = async () => {
+        alert('Click "Send from wallet" to open your wallet and confirm the token transfer. After it is mined, come back and enter the tx hash for verification.');
+        // Optionally close modal now and attempt to auto-submit a token transfer transaction from the dapp:
+        // We'll provide a "Quick send from wallet" button here: attempt to call ERC20.transfer via wallet
+        attemptTokenTransfer(tokenAddr, decimals, totalAmount, tokenSymbol);
+      };
+    }
+
+    async function attemptTokenTransfer(tokenAddr, decimals, amountHuman, symbol){
+      // Attempts to create a token transfer tx and request user signature in wallet
+      if (!userAccount) await connectWallet();
+      const contract = new web3.eth.Contract(ERC20_ABI, tokenAddr);
+      const amountUnits = web3.utils.toBN((BigInt(Math.round(amountHuman * (10 ** 6))) * BigInt(10 ** (decimals - 6))).toString());
+      // NOTE: We computed multiplication in a safe-ish way: multiply by 10^6 then shift — avoids JS floating inaccuracy for typical small amounts.
+      // Alternatively use a bignumber library for production-grade conversions.
+      try {
+        const data = contract.methods.transfer(recipientAddress, amountUnits.toString()).encodeABI();
+        const txParams = {
+          from: userAccount,
+          to: tokenAddr,
+          data: data,
+          value: '0x0'
         };
+        const txHash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
+        alert(`${symbol} transfer submitted. Tx: ${txHash}`);
+        paymentModal.classList.remove('show');
+        // After token tx submitted, you should verify on server-side by checking the TX or Transfer event before minting/claiming.
+      } catch (err) {
+        console.error('Token transfer failed', err);
+        alert('Token transfer failed or canceled. You can copy the address and amount to send manually.');
+      }
+    }
 
-        async function connectWallet() {
-            if (!window.ethereum) {
-                updateWalletStatus('Please install MetaMask or another wallet.', true);
-                return false;
-            }
-            try {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                const network = await provider.getNetwork();
-                if (network.chainId !== 56) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: '0x38' }]
-                        });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
-                            await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [bnbChain]
-                            });
-                        } else {
-                            throw switchError;
-                        }
-                    }
-                }
-                const accounts = await provider.send('eth_requestAccounts', []);
-                walletAddress = accounts[0];
-                updateWalletStatus(`Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`);
-                return true;
-            } catch (error) {
-                updateWalletStatus('Wallet connection failed: ' + error.message, true);
-                return false;
-            }
-        }
+    // clicking outside modal closes it
+    window.addEventListener('click', (e) => {
+      if (paymentModal.classList.contains('show') && !paymentModal.contains(e.target) && !e.target.closest('#buyBtn')) {
+        // don't close if clicking buyBtn or inside
+        paymentModal.classList.remove('show');
+      }
+    });
 
-        function updateWalletStatus(message, isError = false) {
-            const status = document.getElementById('walletStatus');
-            status.textContent = message;
-            status.className = 'wallet-status' + (isError ? ' error' : '');
-        }
+    // On load try to detect wallet
+    (async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        // show short hint
+        // auto-init web3 provider but don't request accounts until user clicks
+        web3 = new Web3(window.ethereum);
+      }
+    })();
 
-        async function generateInvoice() {
-            selectedQuantity = parseInt(document.getElementById('quantity').value) || 1;
-            if (selectedQuantity < 1) {
-                alert('Please enter a valid quantity.');
-                return;
-            }
-            const pricePerToken = 0.001; // 0.001 BNB per token
-            const totalAmount = (selectedQuantity * pricePerToken).toFixed(4);
-            document.getElementById('invoiceDetails').innerHTML = `
-                <p>Quantity: ${selectedQuantity} TiffyAI Tokens</p>
-                <p>Price per Token: ${pricePerToken} BNB</p>
-                <p>Total: ${totalAmount} BNB</p>
-                <p>Payment Method: Select below</p>
-            `;
-            document.getElementById('proceedBtn').disabled = true;
-            document.getElementById('invoicePopup').style.display = 'flex';
-            selectPayment('BNB'); // Default to BNB
-            // Auto-connect wallet
-            const connected = await connectWallet();
-            if (connected) {
-                document.getElementById('proceedBtn').disabled = false;
-            }
-        }
-
-        function selectPayment(method) {
-            selectedPayment = method;
-            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
-            event.target.closest('.payment-option').classList.add('selected');
-            document.querySelector(`input[value="${method}"]`).checked = true;
-            if (walletAddress) {
-                document.getElementById('proceedBtn').disabled = false;
-            }
-        }
-
-        function closePopup() {
-            document.getElementById('invoicePopup').style.display = 'none';
-        }
-
-        async function proceedToPayment() {
-            if (selectedQuantity < 1 || !walletAddress) return;
-
-            // Simulate payment (replace with actual contract interaction)
-            const totalAmount = (selectedQuantity * 0.001).toFixed(4);
-            try {
-                const signer = provider.getSigner();
-                // Example: Send BNB or BTCB to a contract (replace with your contract address)
-                const contractAddress = 'YOUR_CONTRACT_ADDRESS'; // Add your contract address
-                let tx;
-                if (selectedPayment === 'BNB') {
-                    tx = await signer.sendTransaction({
-                        to: contractAddress,
-                        value: ethers.utils.parseEther(totalAmount)
-                    });
-                } else {
-                    // For BTCB, interact with BEP-20 contract (example, needs ABI and address)
-                    alert(`BTCB payment not implemented in demo. Would send ${totalAmount} BTCB to ${contractAddress}`);
-                    return;
-                }
-                updateWalletStatus('Transaction sent, waiting for confirmation...');
-                await tx.wait();
-                updateWalletStatus('Payment confirmed! Redirecting...');
-                // Redirect to /Blue-Key-Claim with params for backend to verify and send tokens
-                window.location.href = `/Blue-Key-Claim?quantity=${selectedQuantity}&payment=${selectedPayment}&wallet=${encodeURIComponent(walletAddress)}&tx=${tx.hash}`;
-            } catch (error) {
-                updateWalletStatus('Payment failed: ' + error.message, true);
-            }
-        }
-
-        // Close popup on outside click
-        window.onclick = function(event) {
-            const popup = document.getElementById('invoicePopup');
-            if (event.target === popup) {
-                closePopup();
-            }
-        };
-    </script>
+  </script>
 </body>
 </html>
