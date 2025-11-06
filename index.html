@@ -252,17 +252,38 @@
     };
     const TOKEN_DECIMALS = { USDT: 18, BTCB: 18 };
     const prices = {
-      BNB: 0.001,
-      USDT: 1.00,
-      BTCB: 0.000014
+        BNB: 0.001,
+        USDT: 1.00,
+        BTCB: 0.000014
     };
-    const BACKEND_URL = '/Blue-Key-Claim'; // Backend endpoint for claim processing
+    const BACKEND_URL = '/Blue-Key-Claim';
     const BSC_CHAIN_ID = 56;
 
     const ERC20_ABI = [
-      { "constant": false, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [ { "name": "", "type": "bool" } ], "type": "function" },
-      { "constant": true, "inputs": [ { "name": "_owner", "type": "address" } ], "name": "balanceOf", "outputs": [ { "name": "", "type": "uint256" } ], "type": "function" },
-      { "constant": true, "inputs": [], "name": "decimals", "outputs": [ { "name": "", "type": "uint8" } ], "type": "function" }
+      {
+        "constant": false,
+        "inputs": [
+          { "name": "_to", "type": "address" },
+          { "name": "_value", "type": "uint256" }
+        ],
+        "name": "transfer",
+        "outputs": [{ "name": "", "type": "bool" }],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [{ "name": "_owner", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "name": "", "type": "uint256" }],
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{ "name": "", "type": "uint8" }],
+        "type": "function"
+      }
     ];
 
     // -------------------
@@ -295,97 +316,140 @@
     }
 
     function updateAmountDisplay() {
+      console.log('Updating amount display');
       const qty = Math.max(1, parseInt(qtyInput.value) || 1);
       const cur = currencySelect.value;
       const unit = prices[cur];
-      const decimals = (cur === 'USDT') ? 2 : 6;
+      const decimals = cur === 'USDT' ? 2 : 6;
       const total = qty * unit;
-      amountDisplay.innerText = `Total: ${toFixedTrim(total, decimals)} ${cur}`;
+      amountDisplay.textContent = `Total: ${toFixedTrim(total, decimals)} ${cur}`;
     }
 
-    currencySelect.addEventListener('change', updateAmountDisplay);
-    qtyInput.addEventListener('input', updateAmountDisplay);
-    updateAmountDisplay();
+    // Initialize event listeners
+    function initEventListeners() {
+      console.log('Initializing event listeners');
+      currencySelect.addEventListener('change', () => {
+        console.log('Currency changed to:', currencySelect.value);
+        updateAmountDisplay();
+      });
+      qtyInput.addEventListener('input', () => {
+        console.log('Quantity input changed to:', qtyInput.value);
+        updateAmountDisplay();
+      });
+      updateAmountDisplay();
+    }
 
     // -------------------
     // Wallet Connect & Chain Handling
     // -------------------
     async function connectWallet() {
+      console.log('Attempting wallet connection');
       if (!window.ethereum) {
         alert('No Web3 wallet detected. Please install MetaMask or a compatible wallet.');
+        console.error('No Ethereum provider found');
         return false;
       }
       try {
         web3 = new Web3(window.ethereum);
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         userAccount = accounts[0];
-        connectedAddrEl.innerText = `Connected: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}`;
+        connectedAddrEl.textContent = `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
         currentChainId = await web3.eth.getChainId();
-        chainInfo.innerText = `Chain: BSC (${currentChainId})`;
-        connectBtn.innerText = 'Wallet Connected';
+        chainInfo.textContent = `Chain: BSC (${currentChainId})`;
+        connectBtn.textContent = 'Wallet Connected';
+        connectBtn.disabled = true; // Prevent multiple connects
+        console.log('Wallet connected:', userAccount, 'Chain ID:', currentChainId);
+
         window.ethereum.on('accountsChanged', (accs) => {
           userAccount = accs[0];
-          connectedAddrEl.innerText = userAccount ? `Connected: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}` : 'Not connected';
+          connectedAddrEl.textContent = userAccount ? `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}` : 'Not connected';
+          connectBtn.textContent = userAccount ? 'Wallet Connected' : 'Connect Wallet';
+          connectBtn.disabled = !!userAccount;
+          console.log('Accounts changed:', userAccount);
         });
+
         window.ethereum.on('chainChanged', (chainHex) => {
           currentChainId = parseInt(chainHex, 16);
-          chainInfo.innerText = `Chain: BSC (${currentChainId})`;
+          chainInfo.textContent = `Chain: BSC (${currentChainId})`;
+          console.log('Chain changed:', currentChainId);
         });
+
         return true;
       } catch (err) {
-        console.error('Connect error:', err);
-        alert('Failed to connect wallet. Please try again.');
+        console.error('Wallet connection error:', err);
+        alert('Failed to connect wallet: ' + (err.message || 'Unknown error'));
         return false;
       }
     }
 
-    connectBtn.addEventListener('click', connectWallet);
+    connectBtn.addEventListener('click', async () => {
+      console.log('Connect button clicked');
+      await connectWallet();
+    });
 
     async function ensureBSC() {
-      if (!web3 && !(await connectWallet())) return false;
-      const chainId = await web3.eth.getChainId();
-      if (chainId !== BSC_CHAIN_ID) {
-        try {
+      console.log('Ensuring BSC network');
+      if (!web3 && !(await connectWallet())) {
+        console.error('Web3 not initialized');
+        return false;
+      }
+      try {
+        const chainId = await web3.eth.getChainId();
+        if (chainId !== BSC_CHAIN_ID) {
+          console.log('Switching to BSC chain');
           await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x38' }]
+            params: [{ chainId: '0x38' }],
           });
           currentChainId = BSC_CHAIN_ID;
-          chainInfo.innerText = `Chain: BSC (${currentChainId})`;
-          return true;
-        } catch (err) {
-          console.error('Chain switch error:', err);
-          alert('Please switch to BNB Smart Chain (BSC) in your wallet.');
-          return false;
+          chainInfo.textContent = `Chain: BSC (${currentChainId})`;
+          console.log('Switched to BSC');
         }
+        return true;
+      } catch (err) {
+        console.error('Chain switch error:', err);
+        alert('Please switch to BNB Smart Chain (BSC) in your wallet.');
+        return false;
       }
-      return true;
     }
 
     // -------------------
     // Invoice & Payment Logic
     // -------------------
-    buyBtn.addEventListener('click', showInvoice);
+    buyBtn.addEventListener('click', async () => {
+      console.log('Buy button clicked');
+      await showInvoice();
+    });
 
     async function showInvoice() {
-      if (!(await ensureBSC())) return;
+      console.log('Showing invoice');
+      if (!(await ensureBSC())) {
+        console.error('BSC check failed');
+        return;
+      }
       const qty = Math.max(1, parseInt(qtyInput.value) || 1);
       const cur = currencySelect.value;
       const unit = prices[cur];
       const total = qty * unit;
-      const decimals = (cur === 'USDT') ? 2 : 6;
+      const decimals = cur === 'USDT' ? 2 : 6;
 
       invoiceDetails.innerHTML = `
         <div><b>Item</b>: TIFFY Token Presale</div>
         <div><b>Quantity</b>: ${qty}</div>
         <div><b>Price per item</b>: ${toFixedTrim(unit, decimals)} ${cur}</div>
         <div><b>Total</b>: ${toFixedTrim(total, decimals)} ${cur}</div>
-        <div><b>Recipient</b>: ${recipientAddress.slice(0,6)}...${recipientAddress.slice(-4)}</div>
+        <div><b>Recipient</b>: ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}</div>
       `;
       invoiceModal.classList.add('show');
+      console.log('Invoice modal opened');
 
-      cancelInvoiceBtn.onclick = () => invoiceModal.classList.remove('show');
+      cancelInvoiceBtn.onclick = () => {
+        console.log('Cancel invoice clicked');
+        invoiceModal.classList.remove('show');
+      };
+
       proceedBtn.onclick = () => {
+        console.log('Proceed to payment clicked');
         invoiceModal.classList.remove('show');
         if (cur === 'BNB') {
           sendBNB(total);
@@ -396,7 +460,11 @@
     }
 
     async function sendBNB(amountBNB) {
-      if (!userAccount && !(await connectWallet())) return;
+      console.log('Sending BNB:', amountBNB);
+      if (!userAccount && !(await connectWallet())) {
+        console.error('No user account');
+        return;
+      }
       try {
         const valueWei = web3.utils.toWei(amountBNB.toString(), 'ether');
         const tx = await window.ethereum.request({
@@ -405,32 +473,150 @@
             from: userAccount,
             to: recipientAddress,
             value: web3.utils.toHex(valueWei),
-            gas: web3.utils.toHex(21000) // Standard gas for simple transfer
-          }]
+            gas: web3.utils.toHex(21000),
+          }],
         });
+        console.log('BNB transaction sent:', tx);
         await submitToBackend(tx, 'BNB', amountBNB, qtyInput.value);
         alert(`BNB transaction submitted. Tx: ${tx}`);
       } catch (err) {
         console.error('BNB send failed:', err);
-        alert('BNB transaction failed or canceled.');
+        alert('BNB transaction failed or canceled: ' + (err.message || 'Unknown error'));
       }
     }
 
     async function showTokenModal(tokenSymbol, qty, totalAmount) {
+      console.log('Showing token modal for:', tokenSymbol, 'Amount:', totalAmount);
       const decimals = TOKEN_DECIMALS[tokenSymbol] || 18;
       const tokenAddr = TOKEN_ADDRESSES[tokenSymbol];
-      modalCurrency.innerText = tokenSymbol;
-      modalAddress.innerText = `${recipientAddress}\n\nAmount: ${toFixedTrim(totalAmount, (tokenSymbol === 'USDT') ? 2 : 6)} ${tokenSymbol}`;
+      modalCurrency.textContent = tokenSymbol;
+      modalAddress.textContent = `${recipientAddress}\n\nAmount: ${toFixedTrim(totalAmount, tokenSymbol === 'USDT' ? 2 : 6)} ${tokenSymbol}`;
       paymentModal.classList.add('show');
+      console.log('Payment modal opened');
 
-      // Generate QR code
       const qrText = `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}&contract=${tokenAddr}`;
       paymentQR.innerHTML = '';
       QRCode.toCanvas(paymentQR, qrText, { width: 120, margin: 1 }, (err) => {
-        if (err) console.error('QR code generation failed:', err);
+        if (err) {
+          console.error('QR code generation failed:', err);
+          alert('Failed to generate QR code');
+        } else {
+          console.log('QR code generated');
+        }
       });
 
       copyAddrBtn.onclick = async () => {
+        console.log('Copy address clicked');
         await navigator.clipboard.writeText(recipientAddress);
-        copyAddrBtn.innerText = 'Copied!';
-        setTimeout(() => copyAddrBtn.innerText = '
+        copyAddrBtn.textContent = 'Copied!';
+        setTimeout(() => copyAddrBtn.textContent = 'Copy Address', 1200);
+      };
+
+      copyAmountBtn.onclick = async () => {
+        console.log('Copy amount clicked');
+        await navigator.clipboard.writeText(totalAmount.toString());
+        copyAmountBtn.textContent = 'Copied!';
+        setTimeout(() => copyAmountBtn.textContent = 'Copy Amount', 1200);
+      };
+
+      openInWallet.onclick = () => {
+        console.log('Open wallet clicked');
+        const link = `https://metamask.app.link/send/${tokenAddr}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+        window.open(link, '_blank');
+      };
+
+      confirmManualBtn.onclick = () => {
+        console.log('Confirm manual payment clicked');
+        attemptTokenTransfer(tokenAddr, decimals, totalAmount, tokenSymbol, qty);
+      };
+    }
+
+    async function attemptTokenTransfer(tokenAddr, decimals, amountHuman, symbol, qty) {
+      console.log('Attempting token transfer:', symbol, amountHuman);
+      if (!userAccount && !(await connectWallet())) {
+        console.error('No user account for token transfer');
+        return;
+      }
+      const contract = new web3.eth.Contract(ERC20_ABI, tokenAddr);
+      try {
+        const balance = await contract.methods.balanceOf(userAccount).call();
+        const amountWei = web3.utils.toBN(BigInt(Math.round(amountHuman * 1e6)) * BigInt(10 ** (decimals - 6)));
+        if (BigInt(balance) < amountWei) {
+          console.error('Insufficient balance:', balance, 'Needed:', amountWei);
+          alert(`Insufficient ${symbol} balance.`);
+          return;
+        }
+        const data = contract.methods.transfer(recipientAddress, amountWei.toString()).encodeABI();
+        const txParams = {
+          from: userAccount,
+          to: tokenAddr,
+          data: data,
+          value: '0x0',
+          gas: web3.utils.toHex(60000),
+        };
+        const txHash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
+        console.log('Token transfer sent:', txHash);
+        await submitToBackend(txHash, symbol, amountHuman, qty);
+        alert(`${symbol} transfer submitted. Tx: ${txHash}`);
+        paymentModal.classList.remove('show');
+      } catch (err) {
+        console.error('Token transfer failed:', err);
+        alert('Token transfer failed or canceled: ' + (err.message || 'Unknown error'));
+      }
+    }
+
+    async function submitToBackend(txHash, currency, amount, qty) {
+      console.log('Submitting to backend:', { txHash, currency, amount, qty, userAddress: userAccount });
+      try {
+        const response = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txHash,
+            currency,
+            amount,
+            qty,
+            userAddress: userAccount,
+          }),
+        });
+        const result = await response.json();
+        console.log('Backend response:', result);
+        if (result.success) {
+          alert('Payment verified and claim processed!');
+          window.location.href = '/Blue-Key-Claim';
+        } else {
+          alert(`Backend verification failed: ${result.message || 'Unknown error'}`);
+        }
+      } catch (err) {
+        console.error('Backend submission failed:', err);
+        alert('Failed to verify payment with backend: ' + (err.message || 'Unknown error'));
+      }
+    }
+
+    // Modal close on outside click
+    window.addEventListener('click', (e) => {
+      if (invoiceModal.classList.contains('show') && !invoiceModal.contains(e.target) && !e.target.closest('#buyBtn')) {
+        console.log('Closing invoice modal via outside click');
+        invoiceModal.classList.remove('show');
+      }
+      if (paymentModal.classList.contains('show') && !paymentModal.contains(e.target) && !e.target.closest('#buyBtn') && !e.target.closest('#proceedBtn')) {
+        console.log('Closing payment modal via outside click');
+        paymentModal.classList.remove('show');
+      }
+    });
+
+    // Initialize Web3 and listeners
+    (async () => {
+      console.log('Initializing Web3');
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        console.log('Web3 initialized');
+        initEventListeners();
+      } else {
+        console.error('No Ethereum provider detected');
+        alert('Please install MetaMask or a compatible wallet to use this page.');
+      }
+    })();
+  </script>
+</body>
+</html>
