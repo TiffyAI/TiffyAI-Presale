@@ -52,7 +52,6 @@
 
     #amountDisplay { margin-top:14px; text-align:center; font-weight:800; color:var(--accent1); font-size:18px; }
 
-    /* Glass modal large readable */
     .modal {
       position: fixed; left:50%; top:50%; transform: translate(-50%, -50%);
       width: 96%; max-width:520px; border-radius:14px; padding:18px;
@@ -111,7 +110,6 @@
     <div class="muted">We will generate an invoice for the chosen currency. After your payment is detected, your tokens will be issued automatically.</div>
   </div>
 
-  <!-- Payment modal (glass) -->
   <div id="payModal" class="modal" role="dialog" aria-hidden="true">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div style="font-weight:800; font-size:18px;" id="modalTitle">Send payment</div>
@@ -151,12 +149,12 @@
       POST /create-invoice  -> { wallet, currency, qty }  returns { invoiceId, payToAddress, amount, currency, expiresAt, qr }
       GET /invoice/:invoiceId -> { status: 'pending'|'paid'|'rewarded', ... }
       POST /invoice/:invoiceId/submit-tx -> { txHash }  (optional manual submission)
-      POST /reward -> { wallet, amount }  (your existing reward endpoint; must only be callable by server or by admin actions)
+      POST /invoice/:invoiceId/reward -> {}  (optional; ideally server auto-rewards)
   - The backend must verify payments and only call your actual transfer code server-side.
 */
 
 /* CONFIG: replace with your backend base URL (https) */
-const API_BASE = 'https://your-backend.example.com'; // << YOUR SERVER here
+const API_BASE = 'https://your-actual-backend.com'; // << REPLACE WITH YOUR BACKEND URL
 
 let userAddress = null;
 
@@ -183,15 +181,24 @@ const submitTx = document.getElementById('submitTx');
 function updateAmount() {
   const qty = Math.max(1, parseInt(qtyEl.value) || 1);
   const cur = currencyEl.value;
-  // prices: 0.001 BNB per token, USDT 1 per token, BTCB approx
   const prices = { BNB: 0.001, USDT: 1.0, BTCB: 0.000014 };
-  const total = (qty * (prices[cur]||0));
+  const total = (qty * (prices[cur] || 0));
   const fmt = (cur === 'USDT') ? total.toFixed(2) : total.toFixed(6);
   amountDisplay.innerText = `Total: ${fmt} ${cur}`;
 }
 currencyEl.addEventListener('change', updateAmount);
 qtyEl.addEventListener('input', updateAmount);
 updateAmount();
+
+/* Check backend availability */
+async function checkBackendAvailability() {
+  try {
+    const resp = await fetch(`${API_BASE}/health`, { method: 'GET' });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
 
 /* Wallet connection: read-only to get user address */
 connectBtn.addEventListener('click', async () => {
@@ -213,7 +220,13 @@ connectBtn.addEventListener('click', async () => {
 
 /* Create invoice & show modal */
 buyBtn.addEventListener('click', async () => {
-  // require user address for attribution (optional but recommended)
+  const isBackendAvailable = await checkBackendAvailability();
+  if (!isBackendAvailable) {
+    statusSmall.innerText = 'Error: Backend unreachable';
+    alert('Cannot connect to the server. Please try again later.');
+    return;
+  }
+
   if (!userAddress) {
     const ok = confirm('Connect wallet to continue? (we only read address)');
     if (!ok) return;
@@ -224,24 +237,33 @@ buyBtn.addEventListener('click', async () => {
   const currency = currencyEl.value;
   const qty = Math.max(1, parseInt(qtyEl.value) || 1);
 
-  // Call your backend to create an invoice
   try {
+    buyBtn.disabled = true;
     statusSmall.innerText = 'Creating invoice...';
     const resp = await fetch(`${API_BASE}/create-invoice`, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wallet: userAddress, currency, qty })
     });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${resp.status}: Failed to create invoice`);
+    }
+
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.message || 'Failed creating invoice');
+    if (!data.invoiceId || !data.payToAddress || !data.amount || !data.currency || !data.expiresAt) {
+      throw new Error('Invalid invoice response: missing required fields');
+    }
 
     openPaymentModal(data);
-    // start polling invoice status (every 6s)
     pollInvoiceStatus(data.invoiceId);
   } catch (err) {
-    console.error(err);
-    alert('Invoice creation failed: ' + (err.message || err));
-    statusSmall.innerText = 'Invoice error';
+    console.error('Invoice creation error:', err);
+    statusSmall.innerText = 'Error: Unable to create invoice';
+    alert(`Failed to create invoice: ${err.message || 'Unknown error. Please try again.'}`);
+  } finally {
+    buyBtn.disabled = false;
   }
 });
 
@@ -254,33 +276,53 @@ function openPaymentModal(invoice) {
   modalExpires.innerText = `Expires at ${new Date(invoice.expiresAt).toLocaleString()}`;
   qrPlaceholder.innerText = invoice.qr || 'QR';
   statusSmall.innerText = 'Invoice created';
-  // store invoice id on modal element
   payModal.dataset.invoiceId = invoice.invoiceId;
 }
 
 /* Copy helpers */
 copyAddr.addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(payAddress.innerText); copyAddr.innerText = 'Copied'; setTimeout(()=>copyAddr.innerText='Copy address',1200); } catch(e){alert('Copy failed');}
+  try {
+    await navigator.clipboard.writeText(payAddress.innerText);
+    copyAddr.innerText = 'Copied';
+    setTimeout(() => copyAddr.innerText = 'Copy address', 1200);
+  } catch (e) {
+    alert('Copy failed');
+  }
 });
 copyAmount.addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(payAmount.innerText.replace('Amount: ','').trim()); copyAmount.innerText = 'Copied'; setTimeout(()=>copyAmount.innerText='Copy amount',1200); } catch(e){alert('Copy failed');}
+  try {
+    await navigator.clipboard.writeText(payAmount.innerText.replace('Amount: ', '').trim());
+    copyAmount.innerText = 'Copied';
+    setTimeout(() => copyAmount.innerText = 'Copy amount', 1200);
+  } catch (e) {
+    alert('Copy failed');
+  }
 });
 
 /* Submit TX hash manually (optional) */
 submitTx.addEventListener('click', async () => {
   const invoiceId = payModal.dataset.invoiceId;
   const txHash = txHashInput.value.trim();
-  if (!txHash) { alert('Paste transaction hash first'); return; }
+  if (!txHash) {
+    alert('Paste transaction hash first');
+    return;
+  }
   statusSmall.innerText = 'Submitting tx...';
   try {
-    const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/submit-tx`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ txHash })});
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.message || 'submit failed');
+    const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/submit-tx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txHash })
+    });
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Submit failed');
+    }
     alert('TX submitted — verification in progress');
     statusSmall.innerText = 'Submitted tx';
   } catch (err) {
-    console.error(err);
-    alert('Submit failed: '+err.message);
+    console.error('Submit error:', err);
+    alert('Submit failed: ' + err.message);
     statusSmall.innerText = 'Submit failed';
   }
 });
@@ -289,55 +331,74 @@ submitTx.addEventListener('click', async () => {
 let polling = {};
 function pollInvoiceStatus(invoiceId) {
   if (polling[invoiceId]) return;
+
+  let errorCount = 0;
+  const maxErrors = 5;
+
   polling[invoiceId] = setInterval(async () => {
     try {
       const resp = await fetch(`${API_BASE}/invoice/${invoiceId}`);
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.message || 'status error');
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${resp.status}: Failed to fetch invoice status`);
+      }
 
-      // possible statuses: pending | paid | rewarded | expired | failed
+      const data = await resp.json();
       statusSmall.innerText = `Invoice: ${data.status}`;
+
       if (data.status === 'paid') {
         statusSmall.innerText = 'Payment received — requesting reward';
-        // request reward (your server may auto-reward itself when it detects incoming payment; this is optional)
         await triggerReward(invoiceId, data);
       } else if (data.status === 'rewarded') {
-        clearInterval(polling[invoiceId]); delete polling[invoiceId];
+        clearInterval(polling[invoiceId]);
+        delete polling[invoiceId];
         alert('Payment confirmed — your tokens are issued. Redirecting...');
         window.location.href = '/Blue-Key-Claim';
       } else if (data.status === 'expired' || data.status === 'failed') {
-        clearInterval(polling[invoiceId]); delete polling[invoiceId];
-        alert('Invoice closed: ' + data.status);
+        clearInterval(polling[invoiceId]);
+        delete polling[invoiceId];
+        alert(`Invoice closed: ${data.status}`);
         payModal.classList.remove('show');
       }
-      // keep polling while pending
+
+      errorCount = 0;
     } catch (err) {
-      console.error('poll error', err);
-      // keep trying; don't spam server if error
+      console.error('Poll error:', err);
+      errorCount++;
+      statusSmall.innerText = `Invoice check failed (${errorCount}/${maxErrors})`;
+      if (errorCount >= maxErrors) {
+        clearInterval(polling[invoiceId]);
+        delete polling[invoiceId];
+        alert('Stopped checking invoice due to repeated errors. Please try again.');
+        payModal.classList.remove('show');
+      }
     }
   }, 6000);
 }
 
-/* Trigger reward API (calls your /reward). Ideally backend auto-runs this when payment verified, but this shows optional flow */
+/* Trigger reward API (optional; ideally backend auto-rewards) */
 async function triggerReward(invoiceId, invoiceData) {
   try {
-    // Option A: backend auto-mints when it detects payment. If so, simply wait for status 'rewarded'.
-    // Option B: frontend triggers reward call (only safe if backend verifies invoice and checks authentication). Here we call a protected endpoint.
-    const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/reward`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({})});
+    const resp = await fetch(`${API_BASE}/invoice/${invoiceId}/reward`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${resp.status}: Reward failed`);
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.message || 'Reward failed');
-    // if backend returns success immediately, redirect
     if (data.success) {
-      // server has already sent reward
       window.location.href = '/Blue-Key-Claim';
     }
   } catch (err) {
-    console.error('reward trigger failed', err);
-    // do nothing; server may auto-issue; front-end will catch 'rewarded' status later
+    console.error('Reward trigger failed:', err);
+    statusSmall.innerText = 'Reward trigger failed, awaiting server confirmation';
   }
 }
 
-/* close modal on outside click */
+/* Close modal on outside click */
 window.addEventListener('click', (e) => {
   if (payModal.classList.contains('show') && !payModal.contains(e.target) && !e.target.closest('#buyBtn')) {
     payModal.classList.remove('show');
