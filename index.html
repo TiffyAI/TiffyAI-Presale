@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Presale Checkout</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      background: url('Presale1.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Poppins', sans-serif;
+      color: #fff;
+      text-align: center;
+      padding: 30px 10px;
+    }
+
+    h1 {
+      font-size: 2em;
+      text-shadow: 0 0 10px #00f0ff;
+    }
+
+    .glow-button {
+      background: linear-gradient(135deg, #00f0ff, #ff00d4);
+      border: none;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-size: 20px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 15px #00f0ff, 0 0 30px #ff00d4;
+      animation: pulse 1.5s infinite;
+      margin-top: 20px;
+      width: 90%;
+      max-width: 300px;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 10px #00f0ff, 0 0 20px #ff00d4; }
+      50% { box-shadow: 0 0 25px #00f0ff, 0 0 50px #ff00d4; }
+      100% { box-shadow: 0 0 10px #00f0ff, 0 0 20px #ff00d4; }
+    }
+
+    input, select {
+      padding: 12px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 20px;
+      width: 90%;
+      max-width: 300px;
+    }
+
+    #amountDisplay {
+      margin-top: 10px;
+      font-size: 22px;
+      color: #00f0ff;
+      text-shadow: 0 0 5px #ff00d4;
+    }
+
+    /* Glass panel */
+    .glass-panel {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 400px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+    }
+
+    #manualPayment {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #ffccff;
+      word-break: break-word;
+    }
+
+    .hidden { display: none; }
+
+    /* Mobile optimization */
+    @media (max-width: 600px) {
+      h1 { font-size: 1.6em; }
+      .glow-button { font-size: 18px; padding: 12px 20px; }
+      input, select { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Presale Purchase</h1>
+
+  <div class="glass-panel">
+    <label for="currencySelect">Select Currency:</label><br>
+    <select id="currencySelect" onchange="updateAmount()">
+      <option value="BNB">BNB</option>
+      <option value="BTC">BTC</option>
+      <option value="SOL">SOL</option>
+      <option value="XRP">XRP</option>
+      <option value="DOGE">DOGE</option>
+      <option value="TON">TON</option>
+      <option value="USDT">USDT</option>
+    </select>
+
+    <div>
+      <p>Enter quantity:</p>
+      <input type="number" id="qtyInput" min="1" value="1" oninput="updateAmount()" />
+      <div id="amountDisplay">Total: 0.0077 BNB</div>
+      <button class="glow-button" onclick="handleBuy()">Buy Now</button>
+      <div id="manualPayment" class="hidden glass-panel"></div>
+    </div>
+  </div>
+
+  <script>
+    const recipientAddress = '0xed9b43bED20B063ae0966C0AEC446bc755fB84bA';
+
+    // Prices equivalent to $1 (approx)
+    const prices = {
+      BNB: 0.00155,
+      BTC: 0.000015,
+      SOL: 0.02,
+      XRP: 2.0,
+      DOGE: 20,
+      TON: 0.3,
+      USDT: 1.00
+    };
+
+    function updateAmount() {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const currency = document.getElementById('currencySelect').value;
+      const total = (qty * prices[currency]).toFixed(4);
+      document.getElementById('amountDisplay').innerText = `Total: ${total} ${currency}`;
+      document.getElementById('manualPayment').classList.add('hidden');
+    }
+
+    async function handleBuy() {
+      const currency = document.getElementById('currencySelect').value;
+      if (currency === 'BNB') {
+        sendBNB();
+      } else {
+        showManualPayment(currency);
+      }
+    }
+
+    async function sendBNB() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('No wallet detected. Use a Web3 wallet like MetaMask.');
+        return;
+      }
+
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await web3.eth.getAccounts();
+      const sender = accounts[0];
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const totalBNB = (qty * prices['BNB']).toString();
+
+      try {
+        await web3.eth.sendTransaction({
+          from: sender,
+          to: recipientAddress,
+          value: web3.utils.toWei(totalBNB, 'ether')
+        });
+        alert('Payment successful! Redirecting...');
+        window.location.href = "/Blue-Key-Claim";
+      } catch (error) {
+        alert('Transaction failed or canceled.');
+        console.error(error);
+      }
+    }
+
+    function showManualPayment(currency) {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+      const total = (qty * prices[currency]).toFixed(4);
+      const msg = `
+        <p><b>Send exactly:</b><br>${total} ${currency}</p>
+        <p><b>To address:</b><br><code>${recipientAddress}</code></p>
+        <p>After payment, your claim will be processed automatically.</p>
+      `;
+      const div = document.getElementById('manualPayment');
+      div.innerHTML = msg;
+      div.classList.remove('hidden');
+    }
+
+    updateAmount();
+  </script>
+
+</body>
+</html>
