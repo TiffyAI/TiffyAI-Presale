@@ -306,7 +306,7 @@
     const connectedAddrEl = document.getElementById('connectedAddr');
     const chainInfo = document.getElementById('chainInfo');
 
-    let web3, userAccount, currentChainId, walletType;
+    let web3, userAccount, currentChainId, walletType, selectedCurrency = 'BNB';
 
     function toFixedTrim(n, decimals = 6) {
       return parseFloat(n).toFixed(decimals).replace(/\.?0+$/, '');
@@ -314,22 +314,24 @@
 
     function updateAmountDisplay() {
       console.log('Updating amount display');
+      selectedCurrency = currencySelect.value;
+      console.log('Currency set to:', selectedCurrency);
       const qty = Math.max(1, parseInt(qtyInput.value) || 1);
-      const cur = currencySelect.value;
-      const unit = prices[cur];
-      const decimals = cur === 'USDT' ? 2 : 6;
+      const unit = prices[selectedCurrency];
+      const decimals = selectedCurrency === 'USDT' ? 2 : 6;
       const total = qty * unit;
-      amountDisplay.textContent = `Total: ${toFixedTrim(total, decimals)} ${cur}`;
+      amountDisplay.textContent = `Total: ${toFixedTrim(total, decimals)} ${selectedCurrency}`;
     }
 
     function initEventListeners() {
       console.log('Initializing event listeners');
       currencySelect.addEventListener('change', () => {
-        console.log('Currency changed to:', currencySelect.value);
+        selectedCurrency = currencySelect.value;
+        console.log('Currency changed to:', selectedCurrency);
         updateAmountDisplay();
       });
       qtyInput.addEventListener('input', () => {
-        console.log('Quantity input changed to:', qtyInput.value);
+        console.log('Quantity changed to:', qtyInput.value);
         updateAmountDisplay();
       });
       updateAmountDisplay();
@@ -338,46 +340,39 @@
     async function detectProvider() {
       console.log('Detecting Web3 provider');
       let provider = null;
-      const maxAttempts = 10;
-      let attempts = 0;
-      while (!provider && attempts < maxAttempts) {
+      for (let i = 0; i < 10; i++) {
         provider = window.ethereum || (window.web3 && window.web3.currentProvider);
-        if (window.ethereum) {
-          if (window.ethereum.isMetaMask) {
+        if (provider) {
+          if (provider.isMetaMask) {
             walletType = 'metamask';
-            console.log('Detected MetaMask provider');
-          } else if (window.ethereum.isTrust || window.ethereum.isTrustWallet) {
+            console.log('Detected MetaMask');
+          } else if (provider.isTrust || provider.isTrustWallet) {
             walletType = 'trust';
-            console.log('Detected Trust Wallet provider');
-          } else if (window.ethereum.isOKXWallet) {
+            console.log('Detected Trust Wallet');
+          } else if (provider.isOKXWallet) {
             walletType = 'okx';
-            console.log('Detected OKX Wallet provider');
+            console.log('Detected OKX Wallet');
           } else {
             walletType = 'unknown';
             console.log('Detected unknown provider');
           }
-          provider = window.ethereum;
           break;
         }
-        console.log(`Waiting for provider, attempt ${attempts + 1}/${maxAttempts}`);
+        console.log(`No provider, retry ${i + 1}/10`);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        attempts++;
       }
       if (!provider) {
-        console.error('No Web3 provider detected after retries');
-        alert('No Web3 wallet detected. Please ensure MetaMask, Trust Wallet, or OKX Wallet is installed and active.');
+        console.error('No Web3 provider detected');
+        alert('Please install MetaMask, Trust Wallet, or OKX Wallet.');
         return null;
       }
       return provider;
     }
 
     async function connectWallet() {
-      console.log('Attempting wallet connection');
+      console.log('Connecting wallet');
       const provider = await detectProvider();
-      if (!provider) {
-        console.error('No provider available for connection');
-        return false;
-      }
+      if (!provider) return false;
       try {
         web3 = new Web3(provider);
         console.log('Web3 initialized');
@@ -403,7 +398,7 @@
                 blockExplorerUrls: ['https://bscscan.com'],
               }],
             });
-            console.log('Added and switched to BSC');
+            console.log('Added BSC');
           } else {
             throw switchError;
           }
@@ -413,7 +408,7 @@
         chainInfo.textContent = `Chain: BSC (${currentChainId})`;
         connectBtn.textContent = 'Wallet Connected';
         connectBtn.disabled = true;
-        console.log('Wallet connected:', userAccount, 'Chain ID:', currentChainId, 'Wallet type:', walletType);
+        console.log('Connected:', userAccount, 'Chain:', currentChainId, 'Wallet:', walletType);
 
         provider.on('accountsChanged', (accs) => {
           userAccount = accs[0];
@@ -431,8 +426,8 @@
 
         return true;
       } catch (err) {
-        console.error('Wallet connection error:', err);
-        alert('Failed to connect wallet or switch to BSC: ' + (err.message || 'Unknown error'));
+        console.error('Connection error:', err);
+        alert('Failed to connect wallet: ' + (err.message || 'Unknown error'));
         return false;
       }
     }
@@ -443,32 +438,26 @@
     });
 
     async function ensureBSC() {
-      console.log('Ensuring BSC network');
-      if (!web3 && !(await connectWallet())) {
-        console.error('Web3 not initialized');
-        return false;
-      }
+      console.log('Checking BSC');
+      if (!web3 && !(await connectWallet())) return false;
       const chainId = await web3.eth.getChainId();
       if (chainId !== BSC_CHAIN_ID) {
-        alert('Please ensure your wallet is on BNB Smart Chain (BSC).');
+        alert('Please switch to BNB Smart Chain (BSC).');
         return false;
       }
       return true;
     }
 
     buyBtn.addEventListener('click', async () => {
-      console.log('Buy button clicked');
+      console.log('Buy button clicked, currency:', selectedCurrency);
       await showInvoice();
     });
 
     async function showInvoice() {
-      console.log('Showing invoice');
-      if (!(await ensureBSC())) {
-        console.error('BSC check failed');
-        return;
-      }
+      console.log('Showing invoice, currency:', selectedCurrency);
+      if (!(await ensureBSC())) return;
       const qty = Math.max(1, parseInt(qtyInput.value) || 1);
-      const cur = currencySelect.value;
+      const cur = selectedCurrency;
       const unit = prices[cur];
       const decimals = cur === 'USDT' ? 2 : 6;
       const total = qty * unit;
@@ -483,23 +472,19 @@
       invoiceModal.classList.add('show');
       console.log('Invoice modal opened');
 
-      cancelInvoiceBtn.onclick = null;
-      proceedBtn.onclick = null;
-
       cancelInvoiceBtn.onclick = () => {
-        console.log('Cancel invoice clicked');
+        console.log('Cancel invoice');
         invoiceModal.classList.remove('show');
       };
-
       proceedBtn.onclick = async () => {
-        console.log('Proceed to payment clicked, currency:', cur);
+        console.log('Proceed to payment, currency:', cur);
         invoiceModal.classList.remove('show');
         await showPaymentModal(cur, qty, total);
       };
     }
 
     async function showPaymentModal(currency, qty, totalAmount) {
-      console.log('Entering showPaymentModal for:', currency, 'Amount:', totalAmount);
+      console.log('Payment modal for:', currency, 'Amount:', totalAmount, 'Wallet:', walletType);
       try {
         const decimals = currency === 'USDT' ? 2 : 6;
         modalCurrency.textContent = currency;
@@ -508,12 +493,11 @@
         try {
           gasPrice = await web3.eth.getGasPrice();
           gasEstimate = currency === 'BNB' ? 21000 : 60000;
-          console.log('Gas price:', gasPrice, 'Gas estimate:', gasEstimate);
+          console.log('Gas:', gasPrice, gasEstimate);
         } catch (err) {
           console.error('Gas estimation failed:', err);
           gasPrice = web3.utils.toWei('5', 'gwei');
           gasEstimate = currency === 'BNB' ? 21000 : 60000;
-          console.log('Using fallback gas values');
         }
         const gasCostBNB = web3.utils.fromWei((BigInt(gasEstimate) * BigInt(gasPrice)).toString(), 'ether');
 
@@ -540,80 +524,72 @@
         modalAddress.textContent = recipientAddress;
 
         if (bnbBalance < totalBNBNeeded) {
-          paymentDetails.innerHTML += `<div style="color:#ff5555;"><b>Error</b>: Insufficient BNB for payment and gas. Need ${toFixedTrim(totalBNBNeeded, 6)} BNB.</div>`;
+          paymentDetails.innerHTML += `<div style="color:#ff5555;"><b>Error</b>: Insufficient BNB. Need ${toFixedTrim(totalBNBNeeded, 6)} BNB.</div>`;
         }
         if (currency !== 'BNB' && BigInt(balance) < BigInt(amountWei)) {
-          paymentDetails.innerHTML += `<div style="color:#ff5555;"><b>Error</b>: Insufficient ${currency} balance. Need ${toFixedTrim(totalAmount, decimals)} ${currency}.</div>`;
+          paymentDetails.innerHTML += `<div style="color:#ff5555;"><b>Error</b>: Insufficient ${currency}. Need ${toFixedTrim(totalAmount, decimals)} ${currency}.</div>`;
         }
 
         paymentModal.classList.add('show');
-        console.log('Payment modal opened for:', currency, 'Wallet:', walletType);
+        console.log('Payment modal opened');
 
-        const qrText = `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}${currency !== 'BNB' ? `&contract=${TOKEN_ADDRESSES[currency]}` : ''}`;
+        const qrText = currency === 'BNB'
+          ? `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
+          : `ethereum:${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${web3.utils.toWei(totalAmount.toString(), 'ether')}`;
         paymentQR.innerHTML = '';
         QRCode.toCanvas(paymentQR, qrText, { width: 120, margin: 1 }, (err) => {
-          if (err) {
-            console.error('QR code generation failed:', err);
-            paymentDetails.innerHTML += `<div style="color:#ff5555;">Failed to generate QR code.</div>`;
-          } else {
-            console.log('QR code generated for:', qrText);
-          }
+          if (err) console.error('QR code failed:', err);
+          else console.log('QR code:', qrText);
         });
 
-        copyAddrBtn.onclick = null;
-        copyAmountBtn.onclick = null;
-        openInWallet.onclick = null;
-        confirmManualBtn.onclick = null;
-
         copyAddrBtn.onclick = async () => {
-          console.log('Copy address clicked');
+          console.log('Copy address');
           await navigator.clipboard.writeText(recipientAddress);
           copyAddrBtn.textContent = 'Copied!';
           setTimeout(() => copyAddrBtn.textContent = 'Copy Address', 1200);
         };
 
         copyAmountBtn.onclick = async () => {
-          console.log('Copy amount clicked');
+          console.log('Copy amount');
           await navigator.clipboard.writeText(totalAmount.toString());
           copyAmountBtn.textContent = 'Copied!';
           setTimeout(() => copyAmountBtn.textContent = 'Copy Amount', 1200);
         };
 
         openInWallet.onclick = () => {
-          console.log('Open wallet clicked, wallet:', walletType);
+          console.log('Open wallet, wallet:', walletType, 'Currency:', currency);
           let link;
+          const amountWei = currency !== 'BNB' ? web3.utils.toWei(totalAmount.toString(), 'ether') : totalAmount;
           if (walletType === 'metamask') {
             link = currency === 'BNB'
-              ? `metamask://send/${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
-              : `metamask://send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+              ? `metamask://send?to=${recipientAddress}&chainId=${BSC_CHAIN_ID}&value=${amountWei}`
+              : `metamask://send?contractAddress=${TOKEN_ADDRESSES[currency]}&to=${recipientAddress}&chainId=${BSC_CHAIN_ID}&value=${amountWei}`;
           } else if (walletType === 'trust') {
             link = currency === 'BNB'
               ? `trust://send/${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
-              : `trust://send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+              : `trust://send/${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${amountWei}`;
           } else if (walletType === 'okx') {
             link = currency === 'BNB'
-              ? `okx://wallet/dapp/send?address=${recipientAddress}&chainId=${BSC_CHAIN_ID}&amount=${totalAmount}`
-              : `okx://wallet/dapp/send?contractAddress=${TOKEN_ADDRESSES[currency]}&chainId=${BSC_CHAIN_ID}&to=${recipientAddress}&amount=${totalAmount}`;
+              ? `okx://wallet/dapp/send?to=${recipientAddress}&chainId=${BSC_CHAIN_ID}&amount=${totalAmount}`
+              : `okx://wallet/dapp/send?contract=${TOKEN_ADDRESSES[currency]}&to=${recipientAddress}&chainId=${BSC_CHAIN_ID}&amount=${totalAmount}`;
           } else {
-            link = currency === 'BNB'
-              ? `ethereum:${recipientAddress}@${BSC_CHAIN_ID}?amount=${totalAmount}`
-              : `ethereum:${TOKEN_ADDRESSES[currency]}@${BSC_CHAIN_ID}/transfer?address=${recipientAddress}&uint256=${totalAmount}`;
+            link = qrText;
           }
-          console.log('Opening wallet with link:', link);
+          console.log('Wallet link:', link);
           window.open(link, '_blank');
         };
 
         confirmManualBtn.onclick = async () => {
-          console.log('Confirm payment clicked for:', currency, 'Wallet:', walletType);
+          console.log('Confirm payment, currency:', currency, 'Wallet:', walletType);
           paymentModal.classList.remove('show');
           if (bnbBalance < totalBNBNeeded) {
-            alert(`Insufficient BNB for payment and gas. Need ${toFixedTrim(totalBNBNeeded, 6)} BNB, but you have ${toFixedTrim(bnbBalance, 6)} BNB.`);
+            alert(`Insufficient BNB. Need ${toFixedTrim(totalBNBNeeded, 6)} BNB.`);
             console.error('Insufficient BNB:', bnbBalance, 'Needed:', totalBNBNeeded);
             return;
           }
           if (currency !== 'BNB' && BigInt(balance) < BigInt(amountWei)) {
-            alert(`Insufficient ${currency} balance. Need ${toFixedTrim(totalAmount, decimals)} ${currency}.`);
-            console.error('Insufficient token balance:', balance, 'Needed:', amountWei);
+            alert(`Insufficient ${currency}. Need ${toFixedTrim(totalAmount, decimals)} ${currency}.`);
+            console.error('Insufficient balance:', balance, 'Needed:', amountWei);
             return;
           }
           if (currency === 'BNB') {
@@ -623,8 +599,8 @@
           }
         };
       } catch (err) {
-        console.error('Error in showPaymentModal:', err);
-        alert('Failed to open payment modal: ' + (err.message || 'Unknown error'));
+        console.error('Payment modal error:', err);
+        alert('Payment modal failed: ' + (err.message || 'Unknown error'));
       }
     }
 
@@ -632,15 +608,12 @@
       console.log('Sending BNB:', amountBNB);
       try {
         const valueWei = web3.utils.toWei(amountBNB.toString(), 'ether');
-        console.log('BNB value in wei:', valueWei);
         const gasPrice = await web3.eth.getGasPrice();
         const gas = 21000;
         const gasCost = BigInt(gas) * BigInt(gasPrice);
         const balance = await web3.eth.getBalance(userAccount);
-        console.log('User BNB balance:', balance);
         if (BigInt(balance) < BigInt(valueWei) + gasCost) {
-          console.error('Insufficient BNB balance');
-          alert(`Insufficient BNB. Need ${toFixedTrim(Number(web3.utils.fromWei((BigInt(valueWei) + gasCost).toString(), 'ether')), 6)} BNB for payment and gas.`);
+          alert(`Insufficient BNB. Need ${toFixedTrim(Number(web3.utils.fromWei((BigInt(valueWei) + gasCost).toString(), 'ether')), 6)} BNB.`);
           return;
         }
         const tx = await window.ethereum.request({
@@ -653,36 +626,32 @@
             gasPrice: web3.utils.toHex(gasPrice),
           }],
         });
-        console.log('BNB transaction sent:', tx);
+        console.log('BNB tx:', tx);
         await submitToBackend(tx, 'BNB', amountBNB, qty);
       } catch (err) {
         console.error('BNB send failed:', err);
-        alert('BNB transaction failed or canceled: ' + (err.message || 'Unknown error'));
+        alert('BNB transaction failed: ' + (err.message || 'Unknown error'));
       }
     }
 
     async function attemptTokenTransfer(currency, amountHuman, qty) {
-      console.log('Attempting token transfer:', currency, amountHuman);
+      console.log('Token transfer:', currency, amountHuman);
       const tokenAddr = TOKEN_ADDRESSES[currency];
       const contract = new web3.eth.Contract(ERC20_ABI, tokenAddr);
       try {
         const balance = await contract.methods.balanceOf(userAccount).call();
         const amountWei = web3.utils.toWei(amountHuman.toString(), 'ether');
-        console.log('Token balance:', balance, 'Amount needed:', amountWei);
         if (BigInt(balance) < BigInt(amountWei)) {
-          console.error('Insufficient balance:', balance, 'Needed:', amountWei);
-          alert(`Insufficient ${currency} balance. Need ${toFixedTrim(amountHuman, currency === 'USDT' ? 2 : 6)} ${currency}.`);
+          alert(`Insufficient ${currency}. Need ${toFixedTrim(amountHuman, currency === 'USDT' ? 2 : 6)} ${currency}.`);
           return;
         }
         const data = contract.methods.transfer(recipientAddress, amountWei).encodeABI();
         const gas = await contract.methods.transfer(recipientAddress, amountWei).estimateGas({ from: userAccount });
         const gasPrice = await web3.eth.getGasPrice();
-        console.log('Estimated gas for token transfer:', gas);
         const bnbBalance = await web3.eth.getBalance(userAccount);
         const gasCost = BigInt(gas) * BigInt(gasPrice);
         if (BigInt(bnbBalance) < gasCost) {
-          console.error('Insufficient BNB for gas');
-          alert(`Insufficient BNB for gas. Need ${toFixedTrim(Number(web3.utils.fromWei(gasCost.toString(), 'ether')), 6)} BNB for gas.`);
+          alert(`Insufficient BNB for gas. Need ${toFixedTrim(Number(web3.utils.fromWei(gasCost.toString(), 'ether')), 6)} BNB.`);
           return;
         }
         const txParams = {
@@ -694,16 +663,16 @@
           gasPrice: web3.utils.toHex(gasPrice),
         };
         const txHash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
-        console.log('Token transfer sent:', txHash);
+        console.log('Token tx:', txHash);
         await submitToBackend(txHash, currency, amountHuman, qty);
       } catch (err) {
         console.error('Token transfer failed:', err);
-        alert('Token transfer failed or canceled: ' + (err.message || 'Unknown error'));
+        alert('Token transfer failed: ' + (err.message || 'Unknown error'));
       }
     }
 
     async function submitToBackend(txHash, currency, amount, qty) {
-      console.log('Submitting to backend:', { txHash, currency, amount, qty, userAddress: userAccount });
+      console.log('Backend submit:', { txHash, currency, amount, qty, userAddress: userAccount });
       try {
         const response = await fetch(BACKEND_URL, {
           method: 'POST',
@@ -719,24 +688,24 @@
         const result = await response.json();
         console.log('Backend response:', result);
         if (result.success) {
-          alert('Payment verified! Redirecting to claim your TIFFY tokens and explore the ecosystem...');
+          alert('Payment verified! Redirecting to claim TIFFY tokens...');
           window.location.href = `${CLAIM_URL}?qty=${qty}`;
         } else {
-          alert(`Backend verification failed: ${result.message || 'Unknown error'}`);
+          alert(`Verification failed: ${result.message || 'Unknown error'}`);
         }
       } catch (err) {
-        console.error('Backend submission failed:', err);
-        alert('Failed to verify payment with backend: ' + (err.message || 'Unknown error'));
+        console.error('Backend failed:', err);
+        alert('Verification failed: ' + (err.message || 'Unknown error'));
       }
     }
 
     window.addEventListener('click', (e) => {
       if (invoiceModal.classList.contains('show') && !invoiceModal.contains(e.target) && !e.target.closest('#buyBtn')) {
-        console.log('Closing invoice modal via outside click');
+        console.log('Closing invoice modal');
         invoiceModal.classList.remove('show');
       }
       if (paymentModal.classList.contains('show') && !paymentModal.contains(e.target) && !e.target.closest('#buyBtn') && !e.target.closest('#proceedBtn')) {
-        console.log('Closing payment modal via outside click');
+        console.log('Closing payment modal');
         paymentModal.classList.remove('show');
       }
     });
@@ -746,16 +715,15 @@
       const provider = await detectProvider();
       if (provider) {
         web3 = new Web3(provider);
-        console.log('Web3 initialized');
+        console.log('Web3 ready');
         initEventListeners();
-        // Auto-connect for mobile wallets
         if (walletType === 'trust' || walletType === 'okx') {
-          console.log(`Auto-connecting ${walletType} wallet`);
+          console.log(`Auto-connecting ${walletType}`);
           await connectWallet();
         }
       } else {
-        console.error('No Ethereum provider detected');
-        alert('Please install MetaMask, Trust Wallet, or OKX Wallet to use this page.');
+        console.error('No provider');
+        alert('Please install MetaMask, Trust Wallet, or OKX Wallet.');
       }
     })();
   </script>
